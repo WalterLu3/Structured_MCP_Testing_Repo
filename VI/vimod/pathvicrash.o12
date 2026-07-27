@@ -1,0 +1,3 @@
+crash_method none
+*pathvi_filename poly.txt
+factorization_method conopt

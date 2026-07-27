@@ -1,0 +1,6 @@
+*crash_method none
+factorization_method  BLU_LUSOL
+
+
+minor_iteration_limit 40000
+

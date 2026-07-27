@@ -1,0 +1,10 @@
+crash_method pathvi
+proximal_perturbation=0
+crash_perturb 0 
+pathvi_filename poly.txt
+presolve 0
+*lemke_start=automatic
+*lemke_start_type=advanced
+*output_minor_iterations_frequency=1
+*output_initial_point_statistics=1
+*output_linear_model=1

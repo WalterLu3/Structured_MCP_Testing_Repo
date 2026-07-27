@@ -1,0 +1,4 @@
+*crash_method none
+factorization_method  umfpack
+
+minor_iteration_limit 40000factorization_library_name 

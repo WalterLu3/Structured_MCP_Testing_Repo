@@ -1,0 +1,21 @@
+--- Job main Start 10/10/25 16:21:10 51.1.0 2d039df5 DAX-DAC arm 64bit/macOS
+*** Unable to open input file (RC=2) main
+*** SysMsg: No such file or directory
+--- Applying:
+    /Library/Frameworks/GAMS.framework/Versions/51/Resources/gmsprmun.txt
+    /Users/walter/Library/Preferences/GAMS/gamsconfig.yaml
+--- GAMS Parameters defined
+    Input main
+    ScrDir /Users/walter/testing_suite/reshop/stochastic_equilibrium/algorithms/225a/
+    SysDir /Library/Frameworks/GAMS.framework/Versions/51/Resources/
+    AppendLog 1
+    --data tree2
+    --quad 0
+    --demandType 1
+    --lambda 0.1
+    --algorithm PD
+    --proximalTerm 0.000000001
+    --iterationLimit 100
+    --randomSeed 1
+*** Status: Terminated due to parameter errors
+--- Job main Stop 10/10/25 16:21:10 elapsed 0:00:00.000

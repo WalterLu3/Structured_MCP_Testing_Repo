@@ -1,0 +1,22 @@
+ssolu="/Users/walter/testing_suite/pathvi/aviproblems/225a/empsolu.dat"
+sstat="/Users/walter/testing_suite/pathvi/aviproblems/225a/empstat.dat"
+scntr="/Users/walter/testing_suite/pathvi/aviproblems/225a/empcntr.dat"
+smatr="/Users/walter/testing_suite/pathvi/aviproblems/225a/empmatr.dat"
+suppress=1 solvelink=2 AL=1 LO=3
+LP=CPLEX
+MIP=CPLEX
+RMIP=CPLEX
+NLP=CONOPT
+MCP=pathvicrash
+MPEC=NLPEC
+RMPEC=NLPEC
+CNS=pathvicrash
+DNLP=CONOPT
+RMINLP=CONOPT
+MINLP=DICOPT
+QCP=CONOPT
+MIQCP=SBB
+RMIQCP=CONOPT
+optfile=1
+procDirPath="/Users/walter/testing_suite/pathvi/aviproblems"
+optDir="/Users/walter/testing_suite/pathvi/aviproblems/"

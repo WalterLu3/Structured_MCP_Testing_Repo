@@ -1,0 +1,28 @@
+ MCP solve
+T =         2.00
+N =         8000
+s =  0.000250000
+objective function value:    378.68347680
+    binding contstraints:            4412
+
+ MCP solve
+T =         2.00
+N =         8000
+s =  0.000250000
+objective function value:    378.68347680
+    binding contstraints:            4415
+
+ MCP solve
+T =         2.00
+N =         8000
+s =  0.000250000
+objective function value:    151.34888705
+    binding contstraints:            5354
+
+ MCP solve
+T =         2.00
+N =         8000
+s =  0.000250000
+objective function value:    151.34888705
+    binding contstraints:            5354
+

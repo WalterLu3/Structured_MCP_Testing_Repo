@@ -1,0 +1,3 @@
+filename mcp_formulation.gms
+subsolver path
+subsolveropt 1

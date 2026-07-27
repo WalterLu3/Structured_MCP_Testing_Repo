@@ -1,0 +1,8 @@
+*factorization_method  conopt
+*factorization_library_name /Users/walter/Documents/HiGHS_example/lib/libhighs.dylib
+*path_basis_modify_tol 0
+
+*factorization_method blu_lusol
+*factorization_method  umfpack
+*factorization_library_name /Users/walter/github/SuiteSparse/stable/lib/libumfpack.dylib
+*factorization_library_name /Users/walter/Downloads/SuiteSparse-5.0.0/lib/libumfpack.dylib
