@@ -1,18 +1,37 @@
 #!/bin/bash
+set -euo pipefail
 
-mkdir result
+# Directory containing run.sh:
+# cur/MCP/genlingnep
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-cp path.op3 path.op3_temp
+# Project root:
+# cur/MCP/genlingnep -> cur/MCP -> cur
+root_dir="$(cd "$script_dir/../.." && pwd)"
 
-echo "factorization_library_name $1" >> path.op3
+output_dir="$root_dir/problem"
 
-gams genlingnep1.gms --dimension=$dimension optfile=1 > result/highs-genlingnep1.log
-gams genlingnep2.gms --dimension=$dimension optfile=2 > result/lusol-genlingnep2.log
-gams genlingnep3.gms --dimension=$dimension optfile=3 > result/umfpack-genlingnep3.log
-gams genlingnep4.gms --dimension=$dimension optfile=4 > result/blulusol-genlingnep4.log
-gams genlingnep5.gms --dimension=$dimension optfile=5 > result/conopt-genlingnep5.log
+mkdir -p "$output_dir"
 
+for model in \
+    genlingnep1 \
+    genlingnep2 \
+    genlingnep3 \
+    genlingnep4 \
+    genlingnep5
+do
+    echo "Generating ${model}.gms..."
 
-cp path.op3_temp path.op3
+    (
+        cd "$script_dir"
 
-rm path.op3_temp
+        gams "${model}.gms" \
+            action=c \
+            dumpOpt=21
+
+        mv "${model}.dmp" \
+            "$output_dir/${model}.gms"
+    )
+done
+
+echo "Generated files in: $output_dir"

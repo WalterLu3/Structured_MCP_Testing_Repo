@@ -1,19 +1,33 @@
 #!/bin/bash
+set -euo pipefail
 
-mkdir result
+# Directory containing this script:
+# cur/MCP/opt_cont
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-cp path.op3 path.op3_temp
+# Project root:
+# cur/MCP/opt_cont -> cur/MCP -> cur
+root_dir="$(cd "$script_dir/../.." && pwd)"
 
-echo "factorization_library_name $1" >> path.op3
+output_dir="$root_dir/problem"
+model_file="$script_dir/opt_cont.gms"
 
-for dimension in 250 500 750 1000 ; do
-    gams opt_cont.gms --dimension=$dimension optfile=1 > result/highs-$dimension.log
-    gams opt_cont.gms --dimension=$dimension optfile=2 > result/lusol-$dimension.log
-    gams opt_cont.gms --dimension=$dimension optfile=3 > result/umfpack-$dimension.log
-    gams opt_cont.gms --dimension=$dimension optfile=4 > result/blulusol-$dimension.log
-    gams opt_cont.gms --dimension=$dimension optfile=5 > result/conopt-$dimension.log
+mkdir -p "$output_dir"
+
+for dimension in 250 500 750 1000; do
+    echo "Generating opt_cont dimension ${dimension}..."
+
+    (
+        cd "$script_dir"
+
+        gams "$model_file" \
+            --dimension="$dimension" \
+            action=c \
+            dumpOpt=21
+
+        mv "opt_cont.dmp" \
+            "$output_dir/opt_cont_dimension_${dimension}.gms"
+    )
 done
 
-cp path.op3_temp path.op3
-
-rm path.op3_temp
+echo "Generated files in: $output_dir"

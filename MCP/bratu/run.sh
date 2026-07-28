@@ -1,21 +1,33 @@
 #!/bin/bash
+set -euo pipefail
 
-mkdir result
+# Directory containing this script:
+# cur/MCP/bratu
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-cp path.op3 path.op3_temp
+# Project root:
+# cur/MCP/bratu -> cur/MCP -> cur
+root_dir="$(cd "$script_dir/../.." && pwd)"
 
-echo "factorization_library_name $1" >> path.op3
+output_dir="$root_dir/problem"
+model_file="$script_dir/bratu.gms"
 
-for dimension in 76 100 150 200 ; do
+mkdir -p "$output_dir"
 
-    gams bratu.gms --dimension=$dimension optfile=1 > result/highs-$dimension.log
-    gams bratu.gms --dimension=$dimension optfile=2 > result/lusol-$dimension.log
-    gams bratu.gms --dimension=$dimension optfile=3 > result/umfpack-$dimension.log
-    gams bratu.gms --dimension=$dimension optfile=4 > result/blulusol-$dimension.log
-    gams bratu.gms --dimension=$dimension optfile=5 > result/conopt-$dimension.log
+for dimension in 76 100 150 200; do
+    echo "Generating Bratu dimension ${dimension}..."
+
+    (
+        cd "$script_dir"
+
+        gams "$model_file" \
+            --dimension="$dimension" \
+            action=c \
+            dumpOpt=21
+
+        mv "bratu.dmp" \
+            "$output_dir/bratu_dimension_${dimension}.gms"
+    )
 done
 
-
-cp path.op3_temp path.op3
-
-rm path.op3_temp
+echo "Generated files in: $output_dir"
