@@ -105,6 +105,10 @@ $elseif %algorithm% == PD-PATH
 
 $include algorithms/algorithm_PD_PATH.gms
 
+$elseif %algorithm% == BACKWARD
+
+$include algorithms/algorithm_backward.gms
+
 *$elseif %algorithm% == PD-PATH-LP
 
 *$include algorithms/algorithm_PD_dualLP.gms

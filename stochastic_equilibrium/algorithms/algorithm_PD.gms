@@ -170,7 +170,7 @@ abort$(gasEnEqulibrium_Dual.modelstat > 2 or gasEnEqulibrium_Dual.solveStat > 1 
 
 currentResidual = meritTM;
 
-
+	residual(iter)$(ord(iter)=iterationCount+1) = currentResidual;
 * check the residual 
 
 
@@ -190,7 +190,7 @@ currentResidual = meritTM;
 	defriskSet_m(a,n)$[not leafn(n)] = -defriskSet.m(a,n);
 	defSupplydemand_m(i,n)$sn(n) = defSupplydemand.m(i,n);
 
-	residual(iter)$(ord(iter)=iterationCount+1) = currentResidual;
+
 	iterationCount = iterationCount + 1;
 );
 *   This should be eliminated later
@@ -231,3 +231,8 @@ defriskSet.m(a,n)$[not leafn(n)] = - defriskSet.m(a,n);
 currentResidual = meritTM;
 display residual;
 display currentResidual;
+
+minResidual = smin(iter$(ord(iter) <= iterationCount + 1),
+                   residual(iter));
+
+display minResidual;

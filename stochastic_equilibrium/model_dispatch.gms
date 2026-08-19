@@ -132,6 +132,23 @@ Equation
 	defBackwardObj(a,n)
 	defBackwardRiskSet(a,n)
 ;
+equation
+	defobj_bw(a)
+	defFlow_bw(a,i,n)
+	defsupp_bw(a,n)
+	defriskSet_bw(a,n)
+	defSupplydemand_bw(i,n)
+;
+
+scalar 
+	proximal_bw /1e-9/
+;
+
+variable
+	multiplierFlow(a,i,n)
+	multiplierRiskSet(a,n)
+;
+
 
 
 * --------------- agent problem --------------- 
@@ -210,6 +227,9 @@ defriskSet(a,n)$[not leafn(n) and  controlN(a,n)]..
 $ifthen %demandType% == 1 
 defSupplydemand(i,n)$(sn(n))..
 	sum(ia(i,a), tau(a)*s(a,i,n)) - D(i,n) + proximalTerm * (p(i,n) - p.l(i,n)) =g= 0;
+
+defSupplydemand_bw(i,n)$(sn(n))..
+	sum(ia(i,a), tau(a)*s(a,i,n)) - D(i,n) + proximal_bw * (p(i,n) - p.l(i,n)) =g= 0;
 $elseif %demandType% == 2
 defSupplydemand(i,n)$(sn(n))..
 	sum(ia(i,a), tau(a)*s(a,i,n)) - (D(i,n) - gamma_p*D(i,n)*(p(i,n) - p_ref(i,n))  ) + proximalTerm * (p(i,n) - p.l(i,n)) =g= 0;
@@ -231,13 +251,71 @@ defBackwardRiskSet(a_s,n_s)$[suba(a_s) and subn(n_s)]..
 	sum(child$succ(n_s,child), y(a_s,child) ) - 1 =e= 0
 ;
 
+defobj_bw(a)..
+	obj(a) =e= 
+	 	sum((i,n)$(not nt(n,'t0')), (proximal_bw/2) * (sqr(x(a,i,n) - x.l(a,i,n)) + sqr(q(a,i,n) - q.l(a,i,n)) + sqr(s(a,i,n) - s.l(a,i,n))))+
+		sum((i,n)$[sn(n) and ia(i,a)], (proximal_bw/2) * (sqr(multiplierFlow(a,i,n)))) + 
+			sum(n$nt(n,'t1'),
+				y(a,n)*(cost(a,n)
+					+ sum(child$succ(n,child),
+						y(a,child)*(cost(a,child)
+							+ sum(grandchild$succ(child,grandchild),
+								y(a,grandchild)*cost(a,grandchild)
+							)
+						)
+					)
+				)
+			)
+;
 
+defFlow_bw(a,i,n)$[sn(n) and ia(i,a)]..
+	x(a,i,n) - sum(parentn(n, parent), x(a,i,parent)) + s(a,i,n) - q(a,i,n) 
+	+ proximal_bw * (multiplierFlow(a,i,n) - multiplierFlow.l(a,i,n)) =e= 0;
+
+defsupp_bw(a,n)$[not leafn(n) and controlN(a,n)]..
+	yobj(a,n) =e= 
+	 sum(child$succ(n,child), (-proximal_bw/2) * sqr(y(a,child) - y.l(a,child))) +
+	 ((-proximal_bw/2) * sqr(multiplierRiskSet(a,n)))+
+	 sum(nt(n,'t0'), 
+	 	sum(child$succ(n,child), y(a,child)* 
+	 		(
+	 			cost(a,child) + 
+	 			sum(grandchild$succ(child, grandchild),
+	 				y(a,grandchild)*(cost(a,grandchild)
+	 					+ sum(ggrandchild$succ(grandchild, ggrandchild),
+	 						y(a,ggrandchild)*cost(a,ggrandchild)
+	 					)
+	 				)
+	 			)
+	 		)
+	 	) 
+	 )	 
+	 + sum(nt(n,'t1'), 
+	 	sum(child$succ(n,child), y(a,child)* 
+	 		(
+	 			cost(a,child) + 
+	 			sum(grandchild$succ(child, grandchild),
+	 				y(a,grandchild)*cost(a,grandchild)
+	 			)
+	 		)
+	 	) 
+	 )
+	 + sum(nt(n,'t2'),  sum(child$succ(n,child), y(a,child)*cost(a,child) ) )
+;
+
+defriskSet_bw(a,n)$[not leafn(n) and  controlN(a,n)]..
+	sum(child$succ(n,child), y(a,child) ) - 1 
+	+ proximal_bw * (multiplierRiskSet(a,n) - multiplierRiskSet.l(a,n)) =e= 0;
+;
 
 model gasEnEqulibrium /defobj, defFlow, defSupplydemand, defsupp, defriskSet/;
 model gasEnEqulibrium_dynamic /defobj_dynamic, defFlow, defSupplydemand/;
 model gasEnEqulibrium_RN /defobj, defFlow, defSupplydemand/;
 model gasEnEqulibrium_Dual /defsupp, defriskSet/;
 model gasEnEqulibrium_Dual_LP /defBackwardObj, defBackwardRiskSet/;
+
+model gasEnEqulibrium_RN_bw /defobj_bw, defFlow_bw, defSupplydemand_bw/;
+model gasEnEqulibrium_Dual_bw /defsupp_bw, defriskSet_bw/;
 
 display nt;
 
