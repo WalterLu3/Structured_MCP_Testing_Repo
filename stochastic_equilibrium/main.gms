@@ -175,6 +175,18 @@ $include algorithms/algorithm_PATH_dynamic.gms
 
 * $include algorithms/algorithm_PD_PERT.gms
 
+*****************************************************************
+* Step 8. mean-semideviation
+*****************************************************************
+
+$elseif %algorithm% == PATH_msd
+
+$include algorithms/algorithm_PATH_semi.gms
+
+$elseif %algorithm% == PD-PATH_msd
+
+$include algorithms/algorithm_PD_PATH_semi.gms
+
 $endif
 
 *****************************************************

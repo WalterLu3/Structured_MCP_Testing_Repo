@@ -204,6 +204,34 @@ defriskSet(a,n)$[not leafn(n) and  controlN(a,n)]..
 	sum(child$succ(n,child), y(a,child) ) - 1 
 	+ proximalTerm * (multiplierRiskSet(a,n) - multiplierRiskSet.l(a,n)) =e= 0;
 
+
+loop(nt(n,t)$[ord(t) < 1.5],
+	y.fx(a,n)=1;
+);
+
+alias (n,nn,nnn);
+scalar k /%lambda%/;
+set sameParent(n,nn);
+variable
+	v(a,n)
+;
+equation
+	defriskSet_mean_semi_deviation(a,n)
+;
+
+v.lo(a,n)=0;
+v.up(a,n)=k;
+
+sameParent(n,nn) = yes$(
+    sum(nnn, (1$succ(nnn,n)) * (1$succ(nnn,nn)))
+);
+
+defriskSet_mean_semi_deviation(a,n)$[sn(n)]..
+	y(a,n) =e= prob(n) * (
+    	1 + v(a,n)
+    	- sum(nn$sameParent(n,nn), prob(nn) * v(a,nn))
+	);
+
 * --------------- vi agent ---------------
 
 * demand satisfaction 
@@ -238,6 +266,10 @@ model gasEnEqulibrium_dynamic /defobj_dynamic, defFlow, defSupplydemand/;
 model gasEnEqulibrium_RN /defobj, defFlow, defSupplydemand/;
 model gasEnEqulibrium_Dual /defsupp, defriskSet/;
 model gasEnEqulibrium_Dual_LP /defBackwardObj, defBackwardRiskSet/;
+
+model gasEnEqulibrium_mean_semideviation /defobj, defFlow, defSupplydemand, defsupp, defriskSet_mean_semi_deviation/;
+model gasEnEqulibrium_RN_mean_semideviation /defobj, defFlow, defSupplydemand/;
+model gasEnEqulibrium_Dual_mean_semideviation /defsupp, defriskSet_mean_semi_deviation/;
 
 display nt;
 
