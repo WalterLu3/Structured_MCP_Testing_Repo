@@ -1,0 +1,81 @@
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+# define the arguments to be parsed
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Generate MCP, VI, stochastic optimization, or stochastic equilibrium problems."
+    )
+
+    parser.add_argument(
+        "--type",
+        type=str,
+        required=True,
+        choices=[
+            "MCP",
+            "VI",
+            "StochasticOptimization",
+            "StochasticEquilibrium",
+        ],
+        help="Category of problem to generate.",
+    )
+
+    parser.add_argument(
+        "--select",
+        type=str,
+        default=None,
+        help="Name of the MCP or VI problem instance.",
+    )
+
+    parser.add_argument(
+        "--dimension",
+        type=int,
+        default=None,
+        help="Dimension of the selected MCP or VI problem.",
+    )
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_arguments()
+
+    # set up the base directory
+    base_dir = Path(__file__).resolve().parent
+
+    # Start preparing script
+    fileName = args.select + ".gms"
+
+    filePATH = base_dir / fileName
+
+    if not filePATH.exists():
+    # file does not exist as a standalone file
+    # look into LINLIB
+        gdxPATH = base_dir / "LINLIB" / "instances" / (args.select + ".gdx")
+
+        lpScriptPath = base_dir / "LINLIB" / "generate_mcp_for_lp.gms"
+
+        if gdxPATH.exists():
+            command = ["gams",
+                       lpScriptPath,
+                       "--iname={GDX}".format(GDX=gdxPATH)
+                       ]
+            subprocess.run(command, check=True)
+    else:
+        # Start preparing script
+        command = [
+            "gams", # python interpreter
+            filePATH,
+            "action=c",
+            "dumpOpt=21",
+        ]
+
+        for name, value in vars(args).items():
+            if name != "select":
+                command += ["--{NAME}={VALUE}".format(NAME=name,VALUE=value)]
+
+        #subprocess.run(command, check=True)
+
+        subprocess.run(command, check=True)
+
