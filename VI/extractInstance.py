@@ -38,8 +38,8 @@ def parse_arguments():
 
     parser.add_argument(
         "--quad",
-        type=str,
-        default="",
+        type=float,
+        default=0,
         help="Weight of the quadratic term in the stage-cost function.",
     )
 
