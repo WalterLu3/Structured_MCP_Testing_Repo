@@ -64,3 +64,8 @@ if __name__ == "__main__":
 
     subprocess.run(command, check=True)
 
+    # fileName rename
+    dump_file = base_dir.parent / (args.select + ".dmp")
+    temp_gms = base_dir.parent / "tempMCP.gms"
+
+    dump_file.rename(temp_gms)
