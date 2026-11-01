@@ -3,7 +3,6 @@
 *
 $onEmpty
 
-$if not setglobal quad $setglobal quad 0
 
 sets i        all rows in MPS order
      ig(i)    greater-than-or equal rows

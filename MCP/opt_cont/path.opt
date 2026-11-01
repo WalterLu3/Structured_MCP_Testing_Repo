@@ -1,7 +1,0 @@
-crash_method none
-factorization_method  highs
-minor_iteration_limit 40000
-
-
-
-

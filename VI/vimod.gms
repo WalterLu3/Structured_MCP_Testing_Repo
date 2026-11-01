@@ -49,6 +49,15 @@ endEmbeddedCode
 
 * x.up(j) = 1e2;
 
+$onecho > jams.opt
+filename mcp_formulation.gms
+subsolver path
+terminate
+$offecho
+
+option emp = jams;
+m.optfile = 1;
+
 solve vi using emp;
 
 scalar objval, objval_mcp;
