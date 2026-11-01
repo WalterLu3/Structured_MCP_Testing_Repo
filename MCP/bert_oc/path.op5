@@ -1,8 +1,0 @@
-crash_method none
-factorization_method  CONOPT
-
-
-minor_iteration_limit 40000
-
-
-*** you need to make sure your CONOPTLU library is in the system directory

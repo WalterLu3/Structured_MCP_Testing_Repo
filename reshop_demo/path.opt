@@ -1,0 +1,5 @@
+crash_method none
+prox_pert 0
+crash_pert no
+minor_iter_limit 1
+major_iter_limit 0
