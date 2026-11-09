@@ -1,4 +1,8 @@
 {
+  "types": [
+    "MCP",
+    "VI"
+  ],
   "problems": [
     {
       "name": "bai_haung",

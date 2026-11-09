@@ -23,7 +23,7 @@ if RUN_GAMS_TESTS:
     sys.argv.remove("--gams-tests")
 
 
-class ExtractionTests(unittest.TestCase):
+class ExtractionFixture(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="extract-unit-")
         self.addCleanup(self.directory.cleanup)
@@ -47,6 +47,8 @@ class ExtractionTests(unittest.TestCase):
         dump = Path(kwargs["cwd"]) / (Path(command[1]).stem + ".dmp")
         dump.write_text("* Expanded GAMS source\n")
 
+
+class ExtractionTests(ExtractionFixture):
     def test_compiles_each_category_directly_without_subfolder_scripts(self):
         for category in ("MCP", "VI"):
             with self.subTest(category=category), patch.object(
@@ -248,6 +250,134 @@ class ExtractionTests(unittest.TestCase):
             code = extraction.main(["extract", "--type", "MCP", "--select", "example"])
         self.assertEqual(code, 1)
         self.assertIn("not found on PATH", error.getvalue())
+
+
+class TypeRegistrationTests(ExtractionFixture):
+    def test_add_type_creates_folder_and_preserves_existing_records(self):
+        before = extraction.load_problem_records(self.root)
+        output = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
+            extraction.subprocess, "run"
+        ) as run, redirect_stdout(output):
+            code = extraction.main(["addType", "--type", "NCP"])
+        self.assertEqual(code, 0)
+        self.assertIn("Registered type 'NCP'", output.getvalue())
+        self.assertTrue((self.root / "NCP" / ".gitkeep").is_file())
+        data = extraction.load_registry(self.root)
+        self.assertEqual(data["types"], ["MCP", "VI", "NCP"])
+        self.assertEqual(data["problems"], before)
+        run.assert_not_called()
+
+    def test_new_type_can_be_listed_before_it_has_problems(self):
+        extraction.add_type("NCP", self.root)
+        output, error = StringIO(), StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(output), redirect_stderr(error):
+            code = extraction.main(["list", "--type", "NCP"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(error.getvalue(), "")
+
+    def test_custom_type_supports_registered_listing_and_direct_extraction(self):
+        extraction.add_type("NCP", self.root)
+        (self.root / "NCP" / "example.gms").write_text("* A custom problem\n")
+        data = extraction.load_registry(self.root)
+        data["problems"].append({"name": "example", "type": "NCP", "file": "NCP/example.gms"})
+        extraction.save_registry(self.root, data)
+        output = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(output):
+            code = extraction.main(["list", "--type", "NCP"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue().splitlines(), ["example"])
+        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
+            output_path = extraction.extract_problem(self.arguments("NCP"), self.root)
+        self.assertEqual(output_path.read_text(), "* Expanded GAMS source\n")
+        self.assertEqual(run.call_args.args[0][1], str(self.root / "NCP" / "example.gms"))
+
+    def test_existing_folder_and_contents_are_preserved(self):
+        folder = self.root / "NCP"
+        folder.mkdir()
+        (folder / "keep.gms").write_text("user model")
+        (folder / ".gitkeep").write_text("existing marker")
+        extraction.add_type("NCP", self.root)
+        self.assertEqual((folder / "keep.gms").read_text(), "user model")
+        self.assertEqual((folder / ".gitkeep").read_text(), "existing marker")
+
+    def test_duplicate_types_and_case_variants_do_not_change_registry(self):
+        before = (self.root / "problems.json").read_bytes()
+        for category in ("MCP", "mcp"):
+            with self.subTest(category=category), self.assertRaisesRegex(ValueError, "already registered"):
+                extraction.add_type(category, self.root)
+        self.assertEqual((self.root / "problems.json").read_bytes(), before)
+        self.assertFalse((self.root / "MCP" / ".gitkeep").exists())
+
+    def test_folder_case_must_match_for_portable_registrations(self):
+        (self.root / "ncp").mkdir()
+        with self.assertRaisesRegex(ValueError, "exact spelling"):
+            extraction.add_type("NCP", self.root)
+
+    def test_invalid_names_are_rejected_before_writing(self):
+        before = (self.root / "problems.json").read_bytes()
+        for category in ("../NCP", "NCP/new", "NCP\\new", ".git", "NCP space", "", "1NCP"):
+            with self.subTest(category=category), self.assertRaises(ValueError):
+                extraction.add_type(category, self.root)
+        self.assertEqual((self.root / "problems.json").read_bytes(), before)
+
+    def test_cli_rejects_type_paths_for_all_commands(self):
+        for command in ("addType", "list", "extract"):
+            options = [command, "--type", "../outside"]
+            if command == "extract":
+                options.extend(["--select", "example"])
+            with self.subTest(command=command), redirect_stderr(StringIO()), self.assertRaises(SystemExit):
+                extraction.parse_arguments(options)
+
+    def test_existing_file_cannot_become_a_type_folder(self):
+        (self.root / "NCP").write_text("keep this file")
+        with self.assertRaisesRegex(ValueError, "real directory"):
+            extraction.add_type("NCP", self.root)
+        self.assertEqual((self.root / "NCP").read_text(), "keep this file")
+
+    def test_failed_save_rolls_back_only_new_files(self):
+        before = (self.root / "problems.json").read_bytes()
+        for existing in (False, True):
+            category = "Existing" if existing else "New"
+            folder = self.root / category
+            if existing:
+                folder.mkdir()
+                (folder / "keep.gms").write_text("user model")
+            with self.subTest(existing=existing), patch.object(
+                extraction, "save_registry", side_effect=OSError("write failed")
+            ), self.assertRaises(OSError):
+                extraction.add_type(category, self.root)
+            self.assertEqual((self.root / "problems.json").read_bytes(), before)
+            if existing:
+                self.assertEqual((folder / "keep.gms").read_text(), "user model")
+                self.assertFalse((folder / ".gitkeep").exists())
+            else:
+                self.assertFalse(folder.exists())
+
+    def test_atomic_save_preserves_registry_when_replace_fails(self):
+        before = (self.root / "problems.json").read_bytes()
+        data = extraction.load_registry(self.root)
+        data["types"].append("NCP")
+        with patch.object(Path, "replace", side_effect=OSError("replace failed")), self.assertRaises(OSError):
+            extraction.save_registry(self.root, data)
+        self.assertEqual((self.root / "problems.json").read_bytes(), before)
+        self.assertFalse(list(self.root.glob(".problems-*.json")))
+
+    def test_unknown_type_is_different_from_an_empty_registered_type(self):
+        error = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stderr(error):
+            code = extraction.main(["list", "--type", "NCP"])
+        self.assertEqual(code, 1)
+        self.assertIn("Unknown type 'NCP'", error.getvalue())
+
+    def test_registry_rejects_invalid_or_duplicate_type_declarations(self):
+        data = extraction.load_registry(self.root)
+        for categories in ("MCP", ["MCP", "VI", "mcp"], ["../outside"], [3], []):
+            with self.subTest(categories=categories):
+                (self.root / "problems.json").write_text(json.dumps({**data, "types": categories}))
+                with self.assertRaises(ValueError):
+                    extraction.load_registry(self.root)
 
 
 @unittest.skipUnless(RUN_GAMS_TESTS, "Enable GAMS integration checks with --gams-tests")

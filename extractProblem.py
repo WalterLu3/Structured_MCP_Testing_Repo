@@ -1,13 +1,14 @@
-"""List registered MCP/VI models or extract a standalone model as tempMCP.gms.
+"""Register problem types, list models, or extract a model as tempMCP.gms.
 
 The problem catalog is stored in problems.json beside this script.
-Models are read from MCP/ or VI/. Extraction calls GAMS
+Each type has a folder beside this script. Extraction calls GAMS
 directly to expand the selected source and its compile-time parameters.
 The expanded source keeps its solve statements for the user to run later.
 """
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -18,10 +19,25 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 
+def validate_type_name(value):
+    """Keep type names to one visible folder component on supported platforms."""
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", value):
+        raise ValueError("Type names must start with a letter and contain only letters, digits, '_' or '-'")
+    return value
+
+
+def parse_type_name(value):
+    """Present invalid type names as normal command-line argument errors."""
+    try:
+        return validate_type_name(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
 def parse_arguments(argv=None):
-    """Parse the list/extract commands; None reads the process's CLI arguments."""
+    """Parse commands; None reads the process's CLI arguments."""
     parser = argparse.ArgumentParser(
-        description="List or extract standalone MCP and VI models."
+        description="Register problem types, list models, or extract standalone GAMS models."
     )
 
     # Listing needs only a category; extraction also requires a model name.
@@ -36,20 +52,24 @@ def parse_arguments(argv=None):
     list_parser.add_argument(
         "--type",
         required=True,
-        choices=["MCP", "VI"],
-        help="Category of problems to list.",
+        type=parse_type_name,
+        help="Registered category of problems to list.",
+    )
+
+    add_type_parser = subparsers.add_parser(
+        "addType", help="Register a problem type and create its folder."
+    )
+    add_type_parser.add_argument(
+        "--type", required=True, type=parse_type_name,
+        help="New type name; also the name of its repository folder.",
     )
 
     # Routing options identify the source file rather than GAMS model parameters.
     extract_parser.add_argument(
         "--type",
-        type=str,
+        type=parse_type_name,
         required=True,
-        choices=[
-            "MCP",
-            "VI",
-        ],
-        help="Category of problem to generate.",
+        help="Type folder containing the model to extract.",
     )
 
     extract_parser.add_argument(
@@ -57,7 +77,7 @@ def parse_arguments(argv=None):
         required=True,
         type=str,
         default=None,
-        help="Name of the MCP or VI problem instance.",
+        help="Name of the problem instance.",
     )
 
     # None means "not supplied": preserve the default declared by the GAMS model.
@@ -140,8 +160,8 @@ def print_arguments(args):
         print(f"  {name} = {value}")
 
 
-def load_problem_records(base_dir):
-    """Read the central catalog and validate names, categories, and source paths."""
+def load_registry(base_dir):
+    """Read the catalog and validate registered types and problem records."""
     registry = base_dir / "problems.json"
     try:
         data = json.loads(registry.read_text(encoding="utf-8"))
@@ -152,6 +172,17 @@ def load_problem_records(base_dir):
     if not isinstance(data, dict) or not isinstance(data.get("problems"), list):
         raise ValueError(f"{registry} must contain a 'problems' array")
 
+    # Accept the original catalog format while migrating types to explicit data.
+    categories = data.get("types", ["MCP", "VI"])
+    if not isinstance(categories, list):
+        raise ValueError(f"{registry}: 'types' must be an array of type names")
+    seen_types = set()
+    for category in categories:
+        validate_type_name(category)
+        if category.casefold() in seen_types:
+            raise ValueError(f"Duplicate registered type: {category}")
+        seen_types.add(category.casefold())
+
     seen = set()
     for index, record in enumerate(data["problems"], 1):
         if not isinstance(record, dict) or any(
@@ -159,8 +190,8 @@ def load_problem_records(base_dir):
         ):
             raise ValueError(f"Problem record {index} needs string fields: name, type, file")
         name, category = record["name"], record["type"]
-        if category not in {"MCP", "VI"}:
-            raise ValueError(f"Problem record {index}: type must be MCP or VI")
+        if category not in categories:
+            raise ValueError(f"Problem record {index}: type '{category}' is not registered")
         if (not name or name in {".", ".."}
                 or Path(name).name != name or "\\" in name):
             raise ValueError(f"Problem record {index}: name must be a model name without directories")
@@ -175,11 +206,77 @@ def load_problem_records(base_dir):
 
     # Missing source files are not a corrupt catalog: large generated models
     # may be registered but absent from a checkout because Git ignores them.
-    return data["problems"]
+    return {**data, "types": categories}
+
+
+def load_problem_records(base_dir):
+    """Return problem records while retaining the existing catalog reader API."""
+    return load_registry(base_dir)["problems"]
+
+
+def save_registry(base_dir, data):
+    """Replace the catalog atomically, preserving its existing file permissions."""
+    registry = base_dir / "problems.json"
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix=".problems-", suffix=".json",
+            dir=base_dir, delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump(data, stream, indent=2)
+            stream.write("\n")
+        temporary.chmod(registry.stat().st_mode & 0o777)
+        temporary.replace(registry)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
+def add_type(category, base_dir):
+    """Register a type and its folder, rolling back new files if saving fails."""
+    validate_type_name(category)
+    data = load_registry(base_dir)
+    for existing in data["types"]:
+        if existing.casefold() == category.casefold():
+            raise ValueError(f"Type '{category}' is already registered as '{existing}'")
+
+    for entry in base_dir.iterdir():
+        if entry.name.casefold() == category.casefold() and entry.name != category:
+            raise ValueError(f"A path already exists as '{entry.name}'; use its exact spelling")
+    folder = base_dir / category
+    if folder.is_symlink() or (folder.exists() and not folder.is_dir()):
+        raise ValueError(f"Type folder must be a real directory: {folder}")
+    folder_created = False
+    marker_created = False
+    marker = folder / ".gitkeep"
+    try:
+        if not folder.exists():
+            folder.mkdir()
+            folder_created = True
+        # Git does not track empty directories; keep an empty new type portable.
+        if not marker.exists() and not marker.is_symlink():
+            with marker.open("x"):
+                pass
+            marker_created = True
+        data["types"].append(category)
+        save_registry(base_dir, data)
+    except BaseException:
+        # Remove only files created by this attempt; preserve existing contents.
+        if marker_created:
+            marker.unlink()
+        if folder_created:
+            try:
+                folder.rmdir()
+            except OSError:
+                pass  # Another process may have added files; leave them intact.
+        raise
+    return folder
 
 
 def extract_problem(args, base_dir):
     """Expand a standalone GAMS model and return the path to tempMCP.gms."""
+    validate_type_name(args.type)
     # A selection is a model name, not a path outside the chosen model folder.
     if (not args.select or args.select in {".", ".."}
             or Path(args.select).name != args.select or "\\" in args.select):
@@ -246,15 +343,27 @@ def main(argv=None):
     """Dispatch the command and return its exit status to the command line."""
     args = parse_arguments(argv)
 
+    if args.command == "addType":
+        try:
+            folder = add_type(args.type, BASE_DIR)
+        except (OSError, ValueError) as error:
+            print(f"Cannot add type: {error}", file=sys.stderr)
+            return 1
+        print(f"Registered type '{args.type}' in problems.json; folder: {folder}")
+        return 0
+
     if args.command == "list":
         # Registration determines which files are problems; do not scan folders.
         try:
-            records = load_problem_records(BASE_DIR)
+            data = load_registry(BASE_DIR)
+            if args.type not in data["types"]:
+                available = ", ".join(data["types"]) or "none"
+                raise ValueError(f"Unknown type '{args.type}'. Registered types: {available}")
         except (OSError, ValueError) as error:
             print(f"Cannot list problems: {error}", file=sys.stderr)
             return 1
         selected = sorted(
-            (record for record in records if record["type"] == args.type),
+            (record for record in data["problems"] if record["type"] == args.type),
             key=lambda record: record["name"],
         )
         for record in selected:

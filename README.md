@@ -25,7 +25,7 @@ The `solver` entry in the current checkout is an empty placeholder file. Experim
 | Path | Purpose |
 | --- | --- |
 | [`extractProblem.py`](extractProblem.py) | List available models or extract an MCP/VI instance. |
-| [`problems.json`](problems.json) | Central registry of problem names, types, and source files used by `list`. |
+| [`problems.json`](problems.json) | Central registry of types, problem names, and source files used by `list` and `addType`. |
 | [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
 | [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
 | [`VI/LINLib/`](VI/LINLib/) | LINLib instances and scripts for reformulating continuous LPs as VIs/MCPs. |
@@ -72,16 +72,16 @@ The generated model is saved as `tempMCP.gms` in the repository root. Each extra
 The examples below assume the repository root as the current directory:
 
 ```text
-python3 extractProblem.py extract --type MCP_OR_VI --select MODEL_NAME [OPTIONS]
+python3 extractProblem.py extract --type PROBLEM_TYPE --select MODEL_NAME [OPTIONS]
 ```
 
 | Argument | Description |
 | --- | --- |
-| `--type` | Required. Selects `MCP` or `VI`. |
+| `--type` | Required. Selects the type folder, initially `MCP` or `VI`. |
 | `--select` | Required. Selects the model name without the `.gms` extension. |
 | `--dimension` | Sets the dimension for models that use this parameter. Supply it when extracting a parameterized model; other models have fixed sizes. |
 
-The root script selects `MCP/<model>.gms` or `VI/<model>.gms` and calls GAMS directly. Model lookup, compilation, and the `tempMCP.gms` output use the script's directory, so the script can also be invoked by its absolute path from another directory.
+The root script selects `<type>/<model>.gms` and calls GAMS directly. Model lookup, compilation, and the `tempMCP.gms` output use the script's directory, so the script can also be invoked by its absolute path from another directory.
 
 Only explicitly supplied modeling parameters are forwarded to GAMS, using names such as `--dimension=200`. Omitted parameters retain the defaults defined by the model. Extraction replaces `tempMCP.gms` only after a successful compilation; a failed compilation preserves the previous output.
 
@@ -117,7 +117,7 @@ python3 extractProblem.py --help
 python3 extractProblem.py extract --help
 ```
 
-The existing parameter flags shown by `extract --help` remain available and are forwarded directly to GAMS when supplied. They affect models that reference the corresponding GAMS parameters; the numerical data in pre-generated LP models are fixed at generation time. The supported extraction types are `MCP` and `VI`. Use the GAMS entry points below for stochastic experiments.
+The existing parameter flags shown by `extract --help` remain available and are forwarded directly to GAMS when supplied. They affect models that reference the corresponding GAMS parameters; the numerical data in pre-generated LP models are fixed at generation time. Type folders start with `MCP` and `VI` and can be extended with `addType`. Use the GAMS entry points below for stochastic experiments.
 
 ### Generating the LINLib LP collection
 
@@ -282,11 +282,42 @@ The main files are:
 - [`algorithms/`](stochastic_equilibrium/algorithms/): implementations of the solution algorithms.
 - [`FischerBurmeisterMacros/`](stochastic_equilibrium/FischerBurmeisterMacros/): residual evaluation for the demand specifications.
 
-## Adding new MCP and VI models
+## Registering problem types and models
+
+### Adding a type
+
+Register a new type and create its folder with:
+
+```bash
+python3 extractProblem.py addType --type NCP
+```
+
+This adds `NCP` to the top-level `types` array in `problems.json` and creates `NCP/` beside the script. The folder includes an empty `.gitkeep` file so Git can track it before any models are added. An existing real directory with the same name can also be registered; its contents are preserved. Duplicate type names, including case variants, are rejected. Type names must start with a letter and contain only letters, digits, underscores, or hyphens.
+
+The registry records empty types separately from their problems:
+
+```json
+{
+  "types": ["MCP", "VI", "NCP"],
+  "problems": []
+}
+```
+
+The command preserves all existing problem records; the empty array above only illustrates the structure. A newly registered type has no listed problems until model files and corresponding problem records are added.
+
+```bash
+python3 extractProblem.py list --type NCP
+```
+
+After adding `NCP/myProblem.gms`, it can be extracted with the same command structure:
+
+```bash
+python3 extractProblem.py extract --type NCP --select myProblem
+```
 
 ### Registering problems for listing
 
-Add an entry to the `problems` array in [`problems.json`](problems.json) when adding a model. Each entry contains its name without the `.gms` extension, its type (`MCP` or `VI`), and its repository-relative source path. For example:
+Add an entry to the `problems` array in [`problems.json`](problems.json) when adding a model. Each entry contains its name without the `.gms` extension, a type registered in the `types` array, and its repository-relative source path. For example:
 
 ```json
 {
@@ -296,7 +327,7 @@ Add an entry to the `problems` array in [`problems.json`](problems.json) when ad
 }
 ```
 
-Each `(type, name)` pair must be unique, and `file` must match `<type>/<name>.gms`. A name can be registered separately under both types. Keep parameter defaults in the GAMS source. Removing an entry removes that problem from the listing without deleting its source file.
+Each `(type, name)` pair must be unique, and `file` must match `<type>/<name>.gms`. A name can be registered separately under different types. Keep parameter defaults in the GAMS source. Removing an entry removes that problem from the listing without deleting its source file.
 
 For now, the registry controls the `list` command. Extraction continues to select an existing `.gms` file directly using `--type` and `--select`.
 
