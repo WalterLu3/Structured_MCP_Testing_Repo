@@ -25,8 +25,8 @@ The `solver` entry in the current checkout is an empty placeholder file. Experim
 | Path | Purpose |
 | --- | --- |
 | [`extractProblem.py`](extractProblem.py) | List available models or extract an MCP/VI instance. |
-| [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems, and the MCP extraction helper. |
-| [`VI/`](VI/) | Models with VI structure and the VI extraction helper. |
+| [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
+| [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
 | [`VI/LINLib/`](VI/LINLib/) | LINLib instances and scripts for reformulating continuous LPs as VIs/MCPs. |
 | [`VI/vimod/`](VI/vimod/) | Additional VI datasets and experiment scripts. |
 | [`VI/small_test/`](VI/small_test/) | Small VI examples and solver option files. |
@@ -68,7 +68,7 @@ The generated model is saved as `tempMCP.gms` in the repository root. Each extra
 
 ## Extracting problem instances
 
-Run extraction commands from the repository root:
+The examples below assume the repository root as the current directory:
 
 ```text
 python3 extractProblem.py extract --type MCP_OR_VI --select MODEL_NAME [OPTIONS]
@@ -79,6 +79,10 @@ python3 extractProblem.py extract --type MCP_OR_VI --select MODEL_NAME [OPTIONS]
 | `--type` | Required. Selects `MCP` or `VI`. |
 | `--select` | Required. Selects the model name without the `.gms` extension. |
 | `--dimension` | Sets the dimension for models that use this parameter. Supply it when extracting a parameterized model; other models have fixed sizes. |
+
+The root script selects `MCP/<model>.gms` or `VI/<model>.gms` and calls GAMS directly. Model lookup, compilation, and the `tempMCP.gms` output use the script's directory, so the script can also be invoked by its absolute path from another directory.
+
+Only explicitly supplied modeling parameters are forwarded to GAMS, using names such as `--dimension=200`. Omitted parameters retain the defaults defined by the model. Extraction replaces `tempMCP.gms` only after a successful compilation; a failed compilation preserves the previous output.
 
 For example, generate the thesis MCP example with dimension 200:
 
@@ -99,7 +103,7 @@ python3 extractProblem.py extract \
 
 This VI model has a fixed mesh in its source file, so the example does not pass `--dimension`.
 
-For standalone models, extraction uses GAMS compilation (`action=c`, `dumpOpt=21`) to expand the source without executing its solve statements. Models already expressed as MCPs can then be solved from `tempMCP.gms`. A source model that uses EMP still requires the corresponding EMP solver when executed; dataset-specific VI conversion scripts perform additional reformulation steps.
+Extraction uses GAMS compilation (`action=c`, `dumpOpt=21`) to expand the selected source without executing its solve statements. Models already expressed as MCPs can then be solved from `tempMCP.gms`. Embedded GAMS code that writes `poly.txt` is retained in the extracted source. A source model that uses EMP still requires the corresponding EMP solver when executed.
 
 The `list` command reports only `.gms` files directly inside `MCP/` or `VI/`. It does not enumerate nested GDX datasets or distinguish model files from helper files. Consult the model source and the collection-specific documentation for any additional inputs. In particular, `exampleVI` in the thesis is an example of a model users can add, rather than an existing top-level model in this checkout.
 
@@ -110,7 +114,7 @@ python3 extractProblem.py --help
 python3 extractProblem.py extract --help
 ```
 
-Although the top-level parser still displays some stochastic experiment arguments, the supported extraction types are `MCP` and `VI`. Use the GAMS entry points below for stochastic experiments.
+The existing parameter flags shown by `extract --help` remain available and are forwarded directly to GAMS when supplied. They affect models that reference the corresponding GAMS parameters; the numerical data in pre-generated LP models are fixed at generation time. The supported extraction types are `MCP` and `VI`. Use the GAMS entry points below for stochastic experiments.
 
 ### Generating the LINLib LP collection
 
@@ -123,6 +127,15 @@ python3 VI/LINLib/generate_instances.py --verify
 Each generated file includes GAMS code that writes its own `poly.txt` before the final solve. For example, `VI/agg.gms` contains the MCP formulation for `agg` and the matching polyhedral row information. The original GDX file is not required to run that exported model.
 
 The batch generator skips non-LP instances and existing output files. Use `--select agg` to select an instance or `--overwrite` to rebuild exports. With `--verify`, it checks each model's poly writer in a temporary directory with the final solve disabled. Results are recorded in `VI/LINLib/generation_report.json`. See the [LINLib instructions](VI/LINLib/README.md) for filtering, fallback exports, and additional options.
+
+Generate any missing LINLib model before selecting it for extraction. For example:
+
+```bash
+python3 VI/LINLib/generate_instances.py --select agg --verify
+python3 extractProblem.py extract --type VI --select agg
+```
+
+The extractor requires the selected `.gms` file to exist; missing models produce an error with a suggestion to use the `list` command.
 
 ## PATHVI experiments
 
@@ -320,3 +333,19 @@ python3 extractProblem.py extract --type VI --select myVI
 GAMS normally writes a listing (`.lst`) alongside other generated files in the working directory. Inspect both the model status and solver status before comparing timings or iteration counts. Individual experiments may also display residuals, timing summaries, or generate additional data files.
 
 Keep the same problem parameters and random seed to reproduce the generated data with the same implementation and software environment. For performance comparisons, record the GAMS and solver versions, experimental solver build, basis library, option files, and hardware. Some experiments generate or overwrite option files in their own directories; inspect the selected algorithm when changing solver settings.
+
+## Extraction checks
+
+Run the extraction unit tests with:
+
+```bash
+python3 -B -m unittest discover -s tests
+```
+
+To include integration checks with an installed, licensed GAMS executable:
+
+```bash
+python3 -B tests/test_extract_problem.py --gams-tests
+```
+
+The integration checks use temporary repositories to verify parameter expansion, failure handling, and preservation of an exported LP's polyhedral row writer.

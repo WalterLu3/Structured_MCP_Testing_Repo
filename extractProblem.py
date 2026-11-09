@@ -1,15 +1,19 @@
-# List available problem instances or extract a selected instance.
+"""List standalone MCP/VI models or extract one as tempMCP.gms."""
 
 import argparse
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
+BASE_DIR = Path(__file__).resolve().parent
+
+
 # define the arguments to be parsed
-def parse_arguments():
+def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
-        description="List or extract MCP, VI."
+        description="List or extract standalone MCP and VI models."
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -112,7 +116,7 @@ def parse_arguments():
         help="Random seed used during data generation.",
     )
 
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def print_arguments(args):
@@ -122,26 +126,78 @@ def print_arguments(args):
         print(f"  {name} = {value}")
 
 
-if __name__ == "__main__":
-    args = parse_arguments()
-    base_dir = Path(__file__).resolve().parent
+def extract_problem(args, base_dir):
+    """Compile the selected source directly and publish its preprocessed model."""
+    if (not args.select or args.select in {".", ".."}
+            or Path(args.select).name != args.select or "\\" in args.select):
+        raise ValueError("--select must be a model name without a directory or .gms extension")
+
+    model = base_dir / args.type / f"{args.select}.gms"
+    if not model.is_file():
+        raise FileNotFoundError(
+            f"Model not found: {model}. "
+            f"Use 'list --type {args.type}' to see available models."
+        )
+
+    parameters = []
+    for name, value in vars(args).items():
+        if name in {"command", "type", "select"} or value is None:
+            continue
+        flag = "lambda" if name == "lambda_" else name
+        parameters.append(f"--{flag}={value}")
+
+    # dumpOpt=21 writes <input name>.dmp in the working directory. Set an
+    # existing dump aside so it cannot be mistaken for this compilation's output.
+    dump = base_dir / f"{args.select}.dmp"
+    if dump.exists() and not dump.is_file() and not dump.is_symlink():
+        raise RuntimeError(f"Cannot write the GAMS dump: {dump} is not a file")
+    with tempfile.TemporaryDirectory(prefix=".extractProblem-", dir=base_dir) as directory:
+        previous_dump = Path(directory) / "previous.dmp"
+        if dump.exists() or dump.is_symlink():
+            dump.replace(previous_dump)
+        command = [
+            "gams", str(model), "action=c", "dumpOpt=21",
+            *parameters,
+        ]
+        try:
+            try:
+                subprocess.run(command, cwd=base_dir, check=True)
+            except FileNotFoundError as error:
+                raise RuntimeError("GAMS executable 'gams' was not found on PATH") from error
+            if not dump.is_file() or dump.stat().st_size == 0:
+                raise RuntimeError("GAMS completed without creating the preprocessed model")
+            output = base_dir / "tempMCP.gms"
+            dump.replace(output)
+        finally:
+            if previous_dump.exists() or previous_dump.is_symlink():
+                previous_dump.replace(dump)
+            elif dump.exists():
+                dump.unlink()
+    return output
+
+
+def main(argv=None):
+    args = parse_arguments(argv)
 
     if args.command == "list":
-        problem_dir = base_dir / args.type
+        problem_dir = BASE_DIR / args.type
         for path in sorted(problem_dir.glob("*.gms")):
             if path.is_file():
                 print(path.stem)
+        return 0
 
-    elif args.command == "extract":
-        print_arguments(args)
-        script = base_dir / args.type / "extractInstance.py"
-        command = [sys.executable, str(script)]
+    print_arguments(args)
+    try:
+        output = extract_problem(args, BASE_DIR)
+    except subprocess.CalledProcessError as error:
+        print(f"Extraction failed: GAMS exited with status {error.returncode}.", file=sys.stderr)
+        return error.returncode
+    except (OSError, RuntimeError, ValueError) as error:
+        print(f"Extraction failed: {error}", file=sys.stderr)
+        return 1
+    print(f"Saved extracted model to {output}")
+    return 0
 
-        for name, value in vars(args).items():
-            if name == "command" or value is None:
-                continue
 
-            flag = "lambda" if name == "lambda_" else name
-            command += [f"--{flag}", str(value)]
-
-        subprocess.run(command, check=True)
+if __name__ == "__main__":
+    raise SystemExit(main())
