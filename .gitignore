@@ -1,1 +1,13 @@
 *.lst
+
+# Generated LINLib models above GitHub's recommended maximum of 50 MiB.
+/VI/nug30.gms
+/VI/osa-60.gms
+/VI/pds-100.gms
+/VI/pds-70.gms
+/VI/pds-80.gms
+/VI/pds-90.gms
+/VI/rail2586.gms
+/VI/rail4284.gms
+/VI/stormg2_1000.gms
+/VI/watson_1.gms
