@@ -1,0 +1,2684 @@
+{
+  "problems": [
+    {
+      "name": "bai_haung",
+      "type": "MCP",
+      "file": "MCP/bai_haung.gms"
+    },
+    {
+      "name": "bratu",
+      "type": "MCP",
+      "file": "MCP/bratu.gms"
+    },
+    {
+      "name": "dirkse2",
+      "type": "MCP",
+      "file": "MCP/dirkse2.gms"
+    },
+    {
+      "name": "25fv47",
+      "type": "VI",
+      "file": "VI/25fv47.gms"
+    },
+    {
+      "name": "80bau3b",
+      "type": "VI",
+      "file": "VI/80bau3b.gms"
+    },
+    {
+      "name": "aa01",
+      "type": "VI",
+      "file": "VI/aa01.gms"
+    },
+    {
+      "name": "aa03",
+      "type": "VI",
+      "file": "VI/aa03.gms"
+    },
+    {
+      "name": "aa3",
+      "type": "VI",
+      "file": "VI/aa3.gms"
+    },
+    {
+      "name": "aa4",
+      "type": "VI",
+      "file": "VI/aa4.gms"
+    },
+    {
+      "name": "aa5",
+      "type": "VI",
+      "file": "VI/aa5.gms"
+    },
+    {
+      "name": "aa6",
+      "type": "VI",
+      "file": "VI/aa6.gms"
+    },
+    {
+      "name": "adlittle",
+      "type": "VI",
+      "file": "VI/adlittle.gms"
+    },
+    {
+      "name": "afiro",
+      "type": "VI",
+      "file": "VI/afiro.gms"
+    },
+    {
+      "name": "agg",
+      "type": "VI",
+      "file": "VI/agg.gms"
+    },
+    {
+      "name": "agg2",
+      "type": "VI",
+      "file": "VI/agg2.gms"
+    },
+    {
+      "name": "agg3",
+      "type": "VI",
+      "file": "VI/agg3.gms"
+    },
+    {
+      "name": "air02",
+      "type": "VI",
+      "file": "VI/air02.gms"
+    },
+    {
+      "name": "air06",
+      "type": "VI",
+      "file": "VI/air06.gms"
+    },
+    {
+      "name": "aircraft",
+      "type": "VI",
+      "file": "VI/aircraft.gms"
+    },
+    {
+      "name": "bandm",
+      "type": "VI",
+      "file": "VI/bandm.gms"
+    },
+    {
+      "name": "bas1lp",
+      "type": "VI",
+      "file": "VI/bas1lp.gms"
+    },
+    {
+      "name": "baxter",
+      "type": "VI",
+      "file": "VI/baxter.gms"
+    },
+    {
+      "name": "beaconfd",
+      "type": "VI",
+      "file": "VI/beaconfd.gms"
+    },
+    {
+      "name": "bert_oc",
+      "type": "VI",
+      "file": "VI/bert_oc.gms"
+    },
+    {
+      "name": "bgdbg1",
+      "type": "VI",
+      "file": "VI/bgdbg1.gms"
+    },
+    {
+      "name": "bgetam",
+      "type": "VI",
+      "file": "VI/bgetam.gms"
+    },
+    {
+      "name": "bgindy",
+      "type": "VI",
+      "file": "VI/bgindy.gms"
+    },
+    {
+      "name": "bgprtr",
+      "type": "VI",
+      "file": "VI/bgprtr.gms"
+    },
+    {
+      "name": "blend",
+      "type": "VI",
+      "file": "VI/blend.gms"
+    },
+    {
+      "name": "bnl1",
+      "type": "VI",
+      "file": "VI/bnl1.gms"
+    },
+    {
+      "name": "bnl2",
+      "type": "VI",
+      "file": "VI/bnl2.gms"
+    },
+    {
+      "name": "boeing1",
+      "type": "VI",
+      "file": "VI/boeing1.gms"
+    },
+    {
+      "name": "boeing2",
+      "type": "VI",
+      "file": "VI/boeing2.gms"
+    },
+    {
+      "name": "bore3d",
+      "type": "VI",
+      "file": "VI/bore3d.gms"
+    },
+    {
+      "name": "box1",
+      "type": "VI",
+      "file": "VI/box1.gms"
+    },
+    {
+      "name": "brandy",
+      "type": "VI",
+      "file": "VI/brandy.gms"
+    },
+    {
+      "name": "capri",
+      "type": "VI",
+      "file": "VI/capri.gms"
+    },
+    {
+      "name": "car4",
+      "type": "VI",
+      "file": "VI/car4.gms"
+    },
+    {
+      "name": "cari",
+      "type": "VI",
+      "file": "VI/cari.gms"
+    },
+    {
+      "name": "cep1",
+      "type": "VI",
+      "file": "VI/cep1.gms"
+    },
+    {
+      "name": "ceria3d",
+      "type": "VI",
+      "file": "VI/ceria3d.gms"
+    },
+    {
+      "name": "ch",
+      "type": "VI",
+      "file": "VI/ch.gms"
+    },
+    {
+      "name": "chemcom",
+      "type": "VI",
+      "file": "VI/chemcom.gms"
+    },
+    {
+      "name": "co5",
+      "type": "VI",
+      "file": "VI/co5.gms"
+    },
+    {
+      "name": "co9",
+      "type": "VI",
+      "file": "VI/co9.gms"
+    },
+    {
+      "name": "complex",
+      "type": "VI",
+      "file": "VI/complex.gms"
+    },
+    {
+      "name": "cplex1",
+      "type": "VI",
+      "file": "VI/cplex1.gms"
+    },
+    {
+      "name": "cplex2",
+      "type": "VI",
+      "file": "VI/cplex2.gms"
+    },
+    {
+      "name": "cq5",
+      "type": "VI",
+      "file": "VI/cq5.gms"
+    },
+    {
+      "name": "cq9",
+      "type": "VI",
+      "file": "VI/cq9.gms"
+    },
+    {
+      "name": "cr42",
+      "type": "VI",
+      "file": "VI/cr42.gms"
+    },
+    {
+      "name": "cre-a",
+      "type": "VI",
+      "file": "VI/cre-a.gms"
+    },
+    {
+      "name": "cre-b",
+      "type": "VI",
+      "file": "VI/cre-b.gms"
+    },
+    {
+      "name": "cre-c",
+      "type": "VI",
+      "file": "VI/cre-c.gms"
+    },
+    {
+      "name": "cre-d",
+      "type": "VI",
+      "file": "VI/cre-d.gms"
+    },
+    {
+      "name": "crew1",
+      "type": "VI",
+      "file": "VI/crew1.gms"
+    },
+    {
+      "name": "cycle",
+      "type": "VI",
+      "file": "VI/cycle.gms"
+    },
+    {
+      "name": "czprob",
+      "type": "VI",
+      "file": "VI/czprob.gms"
+    },
+    {
+      "name": "d2q06c",
+      "type": "VI",
+      "file": "VI/d2q06c.gms"
+    },
+    {
+      "name": "d6cube",
+      "type": "VI",
+      "file": "VI/d6cube.gms"
+    },
+    {
+      "name": "dbic1",
+      "type": "VI",
+      "file": "VI/dbic1.gms"
+    },
+    {
+      "name": "dbir1",
+      "type": "VI",
+      "file": "VI/dbir1.gms"
+    },
+    {
+      "name": "dbir2",
+      "type": "VI",
+      "file": "VI/dbir2.gms"
+    },
+    {
+      "name": "de063155",
+      "type": "VI",
+      "file": "VI/de063155.gms"
+    },
+    {
+      "name": "de063157",
+      "type": "VI",
+      "file": "VI/de063157.gms"
+    },
+    {
+      "name": "de080285",
+      "type": "VI",
+      "file": "VI/de080285.gms"
+    },
+    {
+      "name": "degen2",
+      "type": "VI",
+      "file": "VI/degen2.gms"
+    },
+    {
+      "name": "degen3",
+      "type": "VI",
+      "file": "VI/degen3.gms"
+    },
+    {
+      "name": "delf000",
+      "type": "VI",
+      "file": "VI/delf000.gms"
+    },
+    {
+      "name": "delf001",
+      "type": "VI",
+      "file": "VI/delf001.gms"
+    },
+    {
+      "name": "delf002",
+      "type": "VI",
+      "file": "VI/delf002.gms"
+    },
+    {
+      "name": "delf003",
+      "type": "VI",
+      "file": "VI/delf003.gms"
+    },
+    {
+      "name": "delf004",
+      "type": "VI",
+      "file": "VI/delf004.gms"
+    },
+    {
+      "name": "delf005",
+      "type": "VI",
+      "file": "VI/delf005.gms"
+    },
+    {
+      "name": "delf006",
+      "type": "VI",
+      "file": "VI/delf006.gms"
+    },
+    {
+      "name": "delf007",
+      "type": "VI",
+      "file": "VI/delf007.gms"
+    },
+    {
+      "name": "delf008",
+      "type": "VI",
+      "file": "VI/delf008.gms"
+    },
+    {
+      "name": "delf009",
+      "type": "VI",
+      "file": "VI/delf009.gms"
+    },
+    {
+      "name": "delf010",
+      "type": "VI",
+      "file": "VI/delf010.gms"
+    },
+    {
+      "name": "delf011",
+      "type": "VI",
+      "file": "VI/delf011.gms"
+    },
+    {
+      "name": "delf012",
+      "type": "VI",
+      "file": "VI/delf012.gms"
+    },
+    {
+      "name": "delf013",
+      "type": "VI",
+      "file": "VI/delf013.gms"
+    },
+    {
+      "name": "delf014",
+      "type": "VI",
+      "file": "VI/delf014.gms"
+    },
+    {
+      "name": "delf015",
+      "type": "VI",
+      "file": "VI/delf015.gms"
+    },
+    {
+      "name": "delf017",
+      "type": "VI",
+      "file": "VI/delf017.gms"
+    },
+    {
+      "name": "delf018",
+      "type": "VI",
+      "file": "VI/delf018.gms"
+    },
+    {
+      "name": "delf019",
+      "type": "VI",
+      "file": "VI/delf019.gms"
+    },
+    {
+      "name": "delf020",
+      "type": "VI",
+      "file": "VI/delf020.gms"
+    },
+    {
+      "name": "delf021",
+      "type": "VI",
+      "file": "VI/delf021.gms"
+    },
+    {
+      "name": "delf022",
+      "type": "VI",
+      "file": "VI/delf022.gms"
+    },
+    {
+      "name": "delf023",
+      "type": "VI",
+      "file": "VI/delf023.gms"
+    },
+    {
+      "name": "delf024",
+      "type": "VI",
+      "file": "VI/delf024.gms"
+    },
+    {
+      "name": "delf025",
+      "type": "VI",
+      "file": "VI/delf025.gms"
+    },
+    {
+      "name": "delf026",
+      "type": "VI",
+      "file": "VI/delf026.gms"
+    },
+    {
+      "name": "delf027",
+      "type": "VI",
+      "file": "VI/delf027.gms"
+    },
+    {
+      "name": "delf028",
+      "type": "VI",
+      "file": "VI/delf028.gms"
+    },
+    {
+      "name": "delf029",
+      "type": "VI",
+      "file": "VI/delf029.gms"
+    },
+    {
+      "name": "delf030",
+      "type": "VI",
+      "file": "VI/delf030.gms"
+    },
+    {
+      "name": "delf031",
+      "type": "VI",
+      "file": "VI/delf031.gms"
+    },
+    {
+      "name": "delf032",
+      "type": "VI",
+      "file": "VI/delf032.gms"
+    },
+    {
+      "name": "delf033",
+      "type": "VI",
+      "file": "VI/delf033.gms"
+    },
+    {
+      "name": "delf034",
+      "type": "VI",
+      "file": "VI/delf034.gms"
+    },
+    {
+      "name": "delf035",
+      "type": "VI",
+      "file": "VI/delf035.gms"
+    },
+    {
+      "name": "delf036",
+      "type": "VI",
+      "file": "VI/delf036.gms"
+    },
+    {
+      "name": "deter0",
+      "type": "VI",
+      "file": "VI/deter0.gms"
+    },
+    {
+      "name": "deter1",
+      "type": "VI",
+      "file": "VI/deter1.gms"
+    },
+    {
+      "name": "deter2",
+      "type": "VI",
+      "file": "VI/deter2.gms"
+    },
+    {
+      "name": "deter3",
+      "type": "VI",
+      "file": "VI/deter3.gms"
+    },
+    {
+      "name": "deter4",
+      "type": "VI",
+      "file": "VI/deter4.gms"
+    },
+    {
+      "name": "deter5",
+      "type": "VI",
+      "file": "VI/deter5.gms"
+    },
+    {
+      "name": "deter6",
+      "type": "VI",
+      "file": "VI/deter6.gms"
+    },
+    {
+      "name": "deter7",
+      "type": "VI",
+      "file": "VI/deter7.gms"
+    },
+    {
+      "name": "deter8",
+      "type": "VI",
+      "file": "VI/deter8.gms"
+    },
+    {
+      "name": "df2177",
+      "type": "VI",
+      "file": "VI/df2177.gms"
+    },
+    {
+      "name": "dfl001",
+      "type": "VI",
+      "file": "VI/dfl001.gms"
+    },
+    {
+      "name": "disp3",
+      "type": "VI",
+      "file": "VI/disp3.gms"
+    },
+    {
+      "name": "e226",
+      "type": "VI",
+      "file": "VI/e226.gms"
+    },
+    {
+      "name": "electric-new",
+      "type": "VI",
+      "file": "VI/electric-new.gms"
+    },
+    {
+      "name": "etamacro",
+      "type": "VI",
+      "file": "VI/etamacro.gms"
+    },
+    {
+      "name": "ex3sta1",
+      "type": "VI",
+      "file": "VI/ex3sta1.gms"
+    },
+    {
+      "name": "ex72a",
+      "type": "VI",
+      "file": "VI/ex72a.gms"
+    },
+    {
+      "name": "ex73a",
+      "type": "VI",
+      "file": "VI/ex73a.gms"
+    },
+    {
+      "name": "farm",
+      "type": "VI",
+      "file": "VI/farm.gms"
+    },
+    {
+      "name": "fffff800",
+      "type": "VI",
+      "file": "VI/fffff800.gms"
+    },
+    {
+      "name": "finnis",
+      "type": "VI",
+      "file": "VI/finnis.gms"
+    },
+    {
+      "name": "fit1d",
+      "type": "VI",
+      "file": "VI/fit1d.gms"
+    },
+    {
+      "name": "fit1p",
+      "type": "VI",
+      "file": "VI/fit1p.gms"
+    },
+    {
+      "name": "fit2d",
+      "type": "VI",
+      "file": "VI/fit2d.gms"
+    },
+    {
+      "name": "fit2p",
+      "type": "VI",
+      "file": "VI/fit2p.gms"
+    },
+    {
+      "name": "fome10",
+      "type": "VI",
+      "file": "VI/fome10.gms"
+    },
+    {
+      "name": "fome11",
+      "type": "VI",
+      "file": "VI/fome11.gms"
+    },
+    {
+      "name": "fome12",
+      "type": "VI",
+      "file": "VI/fome12.gms"
+    },
+    {
+      "name": "fome13",
+      "type": "VI",
+      "file": "VI/fome13.gms"
+    },
+    {
+      "name": "fome20",
+      "type": "VI",
+      "file": "VI/fome20.gms"
+    },
+    {
+      "name": "fome21",
+      "type": "VI",
+      "file": "VI/fome21.gms"
+    },
+    {
+      "name": "forest6",
+      "type": "VI",
+      "file": "VI/forest6.gms"
+    },
+    {
+      "name": "forplan",
+      "type": "VI",
+      "file": "VI/forplan.gms"
+    },
+    {
+      "name": "fxm2-16",
+      "type": "VI",
+      "file": "VI/fxm2-16.gms"
+    },
+    {
+      "name": "fxm2-6",
+      "type": "VI",
+      "file": "VI/fxm2-6.gms"
+    },
+    {
+      "name": "fxm3_16",
+      "type": "VI",
+      "file": "VI/fxm3_16.gms"
+    },
+    {
+      "name": "fxm3_6",
+      "type": "VI",
+      "file": "VI/fxm3_6.gms"
+    },
+    {
+      "name": "fxm4_6",
+      "type": "VI",
+      "file": "VI/fxm4_6.gms"
+    },
+    {
+      "name": "galenet",
+      "type": "VI",
+      "file": "VI/galenet.gms"
+    },
+    {
+      "name": "gams10a",
+      "type": "VI",
+      "file": "VI/gams10a.gms"
+    },
+    {
+      "name": "gams10am",
+      "type": "VI",
+      "file": "VI/gams10am.gms"
+    },
+    {
+      "name": "gams30a",
+      "type": "VI",
+      "file": "VI/gams30a.gms"
+    },
+    {
+      "name": "gams30am",
+      "type": "VI",
+      "file": "VI/gams30am.gms"
+    },
+    {
+      "name": "gams60am",
+      "type": "VI",
+      "file": "VI/gams60am.gms"
+    },
+    {
+      "name": "ganges",
+      "type": "VI",
+      "file": "VI/ganges.gms"
+    },
+    {
+      "name": "gas11",
+      "type": "VI",
+      "file": "VI/gas11.gms"
+    },
+    {
+      "name": "ge",
+      "type": "VI",
+      "file": "VI/ge.gms"
+    },
+    {
+      "name": "gen1",
+      "type": "VI",
+      "file": "VI/gen1.gms"
+    },
+    {
+      "name": "gen2",
+      "type": "VI",
+      "file": "VI/gen2.gms"
+    },
+    {
+      "name": "gen4",
+      "type": "VI",
+      "file": "VI/gen4.gms"
+    },
+    {
+      "name": "genlingnep1",
+      "type": "VI",
+      "file": "VI/genlingnep1.gms"
+    },
+    {
+      "name": "genlingnep2",
+      "type": "VI",
+      "file": "VI/genlingnep2.gms"
+    },
+    {
+      "name": "genlingnep3",
+      "type": "VI",
+      "file": "VI/genlingnep3.gms"
+    },
+    {
+      "name": "genlingnep4",
+      "type": "VI",
+      "file": "VI/genlingnep4.gms"
+    },
+    {
+      "name": "genlingnep5",
+      "type": "VI",
+      "file": "VI/genlingnep5.gms"
+    },
+    {
+      "name": "gfrd-pnc",
+      "type": "VI",
+      "file": "VI/gfrd-pnc.gms"
+    },
+    {
+      "name": "gosh",
+      "type": "VI",
+      "file": "VI/gosh.gms"
+    },
+    {
+      "name": "gran",
+      "type": "VI",
+      "file": "VI/gran.gms"
+    },
+    {
+      "name": "greenbea",
+      "type": "VI",
+      "file": "VI/greenbea.gms"
+    },
+    {
+      "name": "greenbeb",
+      "type": "VI",
+      "file": "VI/greenbeb.gms"
+    },
+    {
+      "name": "greenbei",
+      "type": "VI",
+      "file": "VI/greenbei.gms"
+    },
+    {
+      "name": "grow15",
+      "type": "VI",
+      "file": "VI/grow15.gms"
+    },
+    {
+      "name": "grow22",
+      "type": "VI",
+      "file": "VI/grow22.gms"
+    },
+    {
+      "name": "grow7",
+      "type": "VI",
+      "file": "VI/grow7.gms"
+    },
+    {
+      "name": "iiasa",
+      "type": "VI",
+      "file": "VI/iiasa.gms"
+    },
+    {
+      "name": "iprob",
+      "type": "VI",
+      "file": "VI/iprob.gms"
+    },
+    {
+      "name": "israel",
+      "type": "VI",
+      "file": "VI/israel.gms"
+    },
+    {
+      "name": "itest2",
+      "type": "VI",
+      "file": "VI/itest2.gms"
+    },
+    {
+      "name": "itest6",
+      "type": "VI",
+      "file": "VI/itest6.gms"
+    },
+    {
+      "name": "jendrec1",
+      "type": "VI",
+      "file": "VI/jendrec1.gms"
+    },
+    {
+      "name": "kb2",
+      "type": "VI",
+      "file": "VI/kb2.gms"
+    },
+    {
+      "name": "ken-07",
+      "type": "VI",
+      "file": "VI/ken-07.gms"
+    },
+    {
+      "name": "ken-11",
+      "type": "VI",
+      "file": "VI/ken-11.gms"
+    },
+    {
+      "name": "ken-13",
+      "type": "VI",
+      "file": "VI/ken-13.gms"
+    },
+    {
+      "name": "ken-18",
+      "type": "VI",
+      "file": "VI/ken-18.gms"
+    },
+    {
+      "name": "kent",
+      "type": "VI",
+      "file": "VI/kent.gms"
+    },
+    {
+      "name": "kl02",
+      "type": "VI",
+      "file": "VI/kl02.gms"
+    },
+    {
+      "name": "kleemin3",
+      "type": "VI",
+      "file": "VI/kleemin3.gms"
+    },
+    {
+      "name": "kleemin4",
+      "type": "VI",
+      "file": "VI/kleemin4.gms"
+    },
+    {
+      "name": "kleemin5",
+      "type": "VI",
+      "file": "VI/kleemin5.gms"
+    },
+    {
+      "name": "kleemin6",
+      "type": "VI",
+      "file": "VI/kleemin6.gms"
+    },
+    {
+      "name": "kleemin7",
+      "type": "VI",
+      "file": "VI/kleemin7.gms"
+    },
+    {
+      "name": "kleemin8",
+      "type": "VI",
+      "file": "VI/kleemin8.gms"
+    },
+    {
+      "name": "klein1",
+      "type": "VI",
+      "file": "VI/klein1.gms"
+    },
+    {
+      "name": "klein2",
+      "type": "VI",
+      "file": "VI/klein2.gms"
+    },
+    {
+      "name": "klein3",
+      "type": "VI",
+      "file": "VI/klein3.gms"
+    },
+    {
+      "name": "l30",
+      "type": "VI",
+      "file": "VI/l30.gms"
+    },
+    {
+      "name": "l9",
+      "type": "VI",
+      "file": "VI/l9.gms"
+    },
+    {
+      "name": "large000",
+      "type": "VI",
+      "file": "VI/large000.gms"
+    },
+    {
+      "name": "large001",
+      "type": "VI",
+      "file": "VI/large001.gms"
+    },
+    {
+      "name": "large002",
+      "type": "VI",
+      "file": "VI/large002.gms"
+    },
+    {
+      "name": "large003",
+      "type": "VI",
+      "file": "VI/large003.gms"
+    },
+    {
+      "name": "large004",
+      "type": "VI",
+      "file": "VI/large004.gms"
+    },
+    {
+      "name": "large005",
+      "type": "VI",
+      "file": "VI/large005.gms"
+    },
+    {
+      "name": "large006",
+      "type": "VI",
+      "file": "VI/large006.gms"
+    },
+    {
+      "name": "large007",
+      "type": "VI",
+      "file": "VI/large007.gms"
+    },
+    {
+      "name": "large008",
+      "type": "VI",
+      "file": "VI/large008.gms"
+    },
+    {
+      "name": "large009",
+      "type": "VI",
+      "file": "VI/large009.gms"
+    },
+    {
+      "name": "large010",
+      "type": "VI",
+      "file": "VI/large010.gms"
+    },
+    {
+      "name": "large011",
+      "type": "VI",
+      "file": "VI/large011.gms"
+    },
+    {
+      "name": "large012",
+      "type": "VI",
+      "file": "VI/large012.gms"
+    },
+    {
+      "name": "large013",
+      "type": "VI",
+      "file": "VI/large013.gms"
+    },
+    {
+      "name": "large014",
+      "type": "VI",
+      "file": "VI/large014.gms"
+    },
+    {
+      "name": "large015",
+      "type": "VI",
+      "file": "VI/large015.gms"
+    },
+    {
+      "name": "large016",
+      "type": "VI",
+      "file": "VI/large016.gms"
+    },
+    {
+      "name": "large017",
+      "type": "VI",
+      "file": "VI/large017.gms"
+    },
+    {
+      "name": "large018",
+      "type": "VI",
+      "file": "VI/large018.gms"
+    },
+    {
+      "name": "large019",
+      "type": "VI",
+      "file": "VI/large019.gms"
+    },
+    {
+      "name": "large020",
+      "type": "VI",
+      "file": "VI/large020.gms"
+    },
+    {
+      "name": "large021",
+      "type": "VI",
+      "file": "VI/large021.gms"
+    },
+    {
+      "name": "large022",
+      "type": "VI",
+      "file": "VI/large022.gms"
+    },
+    {
+      "name": "large023",
+      "type": "VI",
+      "file": "VI/large023.gms"
+    },
+    {
+      "name": "large024",
+      "type": "VI",
+      "file": "VI/large024.gms"
+    },
+    {
+      "name": "large025",
+      "type": "VI",
+      "file": "VI/large025.gms"
+    },
+    {
+      "name": "large026",
+      "type": "VI",
+      "file": "VI/large026.gms"
+    },
+    {
+      "name": "large027",
+      "type": "VI",
+      "file": "VI/large027.gms"
+    },
+    {
+      "name": "large028",
+      "type": "VI",
+      "file": "VI/large028.gms"
+    },
+    {
+      "name": "large029",
+      "type": "VI",
+      "file": "VI/large029.gms"
+    },
+    {
+      "name": "large030",
+      "type": "VI",
+      "file": "VI/large030.gms"
+    },
+    {
+      "name": "large031",
+      "type": "VI",
+      "file": "VI/large031.gms"
+    },
+    {
+      "name": "large032",
+      "type": "VI",
+      "file": "VI/large032.gms"
+    },
+    {
+      "name": "large033",
+      "type": "VI",
+      "file": "VI/large033.gms"
+    },
+    {
+      "name": "large034",
+      "type": "VI",
+      "file": "VI/large034.gms"
+    },
+    {
+      "name": "large035",
+      "type": "VI",
+      "file": "VI/large035.gms"
+    },
+    {
+      "name": "large036",
+      "type": "VI",
+      "file": "VI/large036.gms"
+    },
+    {
+      "name": "lotfi",
+      "type": "VI",
+      "file": "VI/lotfi.gms"
+    },
+    {
+      "name": "lp22",
+      "type": "VI",
+      "file": "VI/lp22.gms"
+    },
+    {
+      "name": "lpl1",
+      "type": "VI",
+      "file": "VI/lpl1.gms"
+    },
+    {
+      "name": "lpl2",
+      "type": "VI",
+      "file": "VI/lpl2.gms"
+    },
+    {
+      "name": "lpl3",
+      "type": "VI",
+      "file": "VI/lpl3.gms"
+    },
+    {
+      "name": "maros-r7",
+      "type": "VI",
+      "file": "VI/maros-r7.gms"
+    },
+    {
+      "name": "maros",
+      "type": "VI",
+      "file": "VI/maros.gms"
+    },
+    {
+      "name": "mod2",
+      "type": "VI",
+      "file": "VI/mod2.gms"
+    },
+    {
+      "name": "model1",
+      "type": "VI",
+      "file": "VI/model1.gms"
+    },
+    {
+      "name": "model10",
+      "type": "VI",
+      "file": "VI/model10.gms"
+    },
+    {
+      "name": "model11",
+      "type": "VI",
+      "file": "VI/model11.gms"
+    },
+    {
+      "name": "model2",
+      "type": "VI",
+      "file": "VI/model2.gms"
+    },
+    {
+      "name": "model3",
+      "type": "VI",
+      "file": "VI/model3.gms"
+    },
+    {
+      "name": "model4",
+      "type": "VI",
+      "file": "VI/model4.gms"
+    },
+    {
+      "name": "model5",
+      "type": "VI",
+      "file": "VI/model5.gms"
+    },
+    {
+      "name": "model6",
+      "type": "VI",
+      "file": "VI/model6.gms"
+    },
+    {
+      "name": "model7",
+      "type": "VI",
+      "file": "VI/model7.gms"
+    },
+    {
+      "name": "model8",
+      "type": "VI",
+      "file": "VI/model8.gms"
+    },
+    {
+      "name": "model9",
+      "type": "VI",
+      "file": "VI/model9.gms"
+    },
+    {
+      "name": "modszk1",
+      "type": "VI",
+      "file": "VI/modszk1.gms"
+    },
+    {
+      "name": "mondou2",
+      "type": "VI",
+      "file": "VI/mondou2.gms"
+    },
+    {
+      "name": "multi",
+      "type": "VI",
+      "file": "VI/multi.gms"
+    },
+    {
+      "name": "nemsafm",
+      "type": "VI",
+      "file": "VI/nemsafm.gms"
+    },
+    {
+      "name": "nemscem",
+      "type": "VI",
+      "file": "VI/nemscem.gms"
+    },
+    {
+      "name": "nemsemm1",
+      "type": "VI",
+      "file": "VI/nemsemm1.gms"
+    },
+    {
+      "name": "nemsemm2",
+      "type": "VI",
+      "file": "VI/nemsemm2.gms"
+    },
+    {
+      "name": "nemspmm1",
+      "type": "VI",
+      "file": "VI/nemspmm1.gms"
+    },
+    {
+      "name": "nemspmm2",
+      "type": "VI",
+      "file": "VI/nemspmm2.gms"
+    },
+    {
+      "name": "nemswrld",
+      "type": "VI",
+      "file": "VI/nemswrld.gms"
+    },
+    {
+      "name": "nesm",
+      "type": "VI",
+      "file": "VI/nesm.gms"
+    },
+    {
+      "name": "nl",
+      "type": "VI",
+      "file": "VI/nl.gms"
+    },
+    {
+      "name": "nsct1",
+      "type": "VI",
+      "file": "VI/nsct1.gms"
+    },
+    {
+      "name": "nsct2",
+      "type": "VI",
+      "file": "VI/nsct2.gms"
+    },
+    {
+      "name": "nsic1",
+      "type": "VI",
+      "file": "VI/nsic1.gms"
+    },
+    {
+      "name": "nsic2",
+      "type": "VI",
+      "file": "VI/nsic2.gms"
+    },
+    {
+      "name": "nsir1",
+      "type": "VI",
+      "file": "VI/nsir1.gms"
+    },
+    {
+      "name": "nsir2",
+      "type": "VI",
+      "file": "VI/nsir2.gms"
+    },
+    {
+      "name": "nug05",
+      "type": "VI",
+      "file": "VI/nug05.gms"
+    },
+    {
+      "name": "nug06",
+      "type": "VI",
+      "file": "VI/nug06.gms"
+    },
+    {
+      "name": "nug07",
+      "type": "VI",
+      "file": "VI/nug07.gms"
+    },
+    {
+      "name": "nug12",
+      "type": "VI",
+      "file": "VI/nug12.gms"
+    },
+    {
+      "name": "nug15",
+      "type": "VI",
+      "file": "VI/nug15.gms"
+    },
+    {
+      "name": "nug20",
+      "type": "VI",
+      "file": "VI/nug20.gms"
+    },
+    {
+      "name": "nug30",
+      "type": "VI",
+      "file": "VI/nug30.gms"
+    },
+    {
+      "name": "nw14",
+      "type": "VI",
+      "file": "VI/nw14.gms"
+    },
+    {
+      "name": "opt_cont",
+      "type": "VI",
+      "file": "VI/opt_cont.gms"
+    },
+    {
+      "name": "orna1",
+      "type": "VI",
+      "file": "VI/orna1.gms"
+    },
+    {
+      "name": "orna2",
+      "type": "VI",
+      "file": "VI/orna2.gms"
+    },
+    {
+      "name": "orna3",
+      "type": "VI",
+      "file": "VI/orna3.gms"
+    },
+    {
+      "name": "orna4",
+      "type": "VI",
+      "file": "VI/orna4.gms"
+    },
+    {
+      "name": "orna7",
+      "type": "VI",
+      "file": "VI/orna7.gms"
+    },
+    {
+      "name": "orswq2",
+      "type": "VI",
+      "file": "VI/orswq2.gms"
+    },
+    {
+      "name": "osa-07",
+      "type": "VI",
+      "file": "VI/osa-07.gms"
+    },
+    {
+      "name": "osa-14",
+      "type": "VI",
+      "file": "VI/osa-14.gms"
+    },
+    {
+      "name": "osa-30",
+      "type": "VI",
+      "file": "VI/osa-30.gms"
+    },
+    {
+      "name": "osa-60",
+      "type": "VI",
+      "file": "VI/osa-60.gms"
+    },
+    {
+      "name": "p0040",
+      "type": "VI",
+      "file": "VI/p0040.gms"
+    },
+    {
+      "name": "p010",
+      "type": "VI",
+      "file": "VI/p010.gms"
+    },
+    {
+      "name": "p0291",
+      "type": "VI",
+      "file": "VI/p0291.gms"
+    },
+    {
+      "name": "p05",
+      "type": "VI",
+      "file": "VI/p05.gms"
+    },
+    {
+      "name": "p19",
+      "type": "VI",
+      "file": "VI/p19.gms"
+    },
+    {
+      "name": "p6000",
+      "type": "VI",
+      "file": "VI/p6000.gms"
+    },
+    {
+      "name": "pang",
+      "type": "VI",
+      "file": "VI/pang.gms"
+    },
+    {
+      "name": "pcb1000",
+      "type": "VI",
+      "file": "VI/pcb1000.gms"
+    },
+    {
+      "name": "pcb3000",
+      "type": "VI",
+      "file": "VI/pcb3000.gms"
+    },
+    {
+      "name": "pds-02",
+      "type": "VI",
+      "file": "VI/pds-02.gms"
+    },
+    {
+      "name": "pds-06",
+      "type": "VI",
+      "file": "VI/pds-06.gms"
+    },
+    {
+      "name": "pds-10",
+      "type": "VI",
+      "file": "VI/pds-10.gms"
+    },
+    {
+      "name": "pds-100",
+      "type": "VI",
+      "file": "VI/pds-100.gms"
+    },
+    {
+      "name": "pds-2",
+      "type": "VI",
+      "file": "VI/pds-2.gms"
+    },
+    {
+      "name": "pds-20",
+      "type": "VI",
+      "file": "VI/pds-20.gms"
+    },
+    {
+      "name": "pds-30",
+      "type": "VI",
+      "file": "VI/pds-30.gms"
+    },
+    {
+      "name": "pds-40",
+      "type": "VI",
+      "file": "VI/pds-40.gms"
+    },
+    {
+      "name": "pds-50",
+      "type": "VI",
+      "file": "VI/pds-50.gms"
+    },
+    {
+      "name": "pds-60",
+      "type": "VI",
+      "file": "VI/pds-60.gms"
+    },
+    {
+      "name": "pds-70",
+      "type": "VI",
+      "file": "VI/pds-70.gms"
+    },
+    {
+      "name": "pds-80",
+      "type": "VI",
+      "file": "VI/pds-80.gms"
+    },
+    {
+      "name": "pds-90",
+      "type": "VI",
+      "file": "VI/pds-90.gms"
+    },
+    {
+      "name": "perold",
+      "type": "VI",
+      "file": "VI/perold.gms"
+    },
+    {
+      "name": "pf2177",
+      "type": "VI",
+      "file": "VI/pf2177.gms"
+    },
+    {
+      "name": "pgp2",
+      "type": "VI",
+      "file": "VI/pgp2.gms"
+    },
+    {
+      "name": "pies",
+      "type": "VI",
+      "file": "VI/pies.gms"
+    },
+    {
+      "name": "pilot-ja",
+      "type": "VI",
+      "file": "VI/pilot-ja.gms"
+    },
+    {
+      "name": "pilot-we",
+      "type": "VI",
+      "file": "VI/pilot-we.gms"
+    },
+    {
+      "name": "pilot",
+      "type": "VI",
+      "file": "VI/pilot.gms"
+    },
+    {
+      "name": "pilot4",
+      "type": "VI",
+      "file": "VI/pilot4.gms"
+    },
+    {
+      "name": "pilot4i",
+      "type": "VI",
+      "file": "VI/pilot4i.gms"
+    },
+    {
+      "name": "pilot87",
+      "type": "VI",
+      "file": "VI/pilot87.gms"
+    },
+    {
+      "name": "pilotnov",
+      "type": "VI",
+      "file": "VI/pilotnov.gms"
+    },
+    {
+      "name": "pldd000b",
+      "type": "VI",
+      "file": "VI/pldd000b.gms"
+    },
+    {
+      "name": "pldd001b",
+      "type": "VI",
+      "file": "VI/pldd001b.gms"
+    },
+    {
+      "name": "pldd002b",
+      "type": "VI",
+      "file": "VI/pldd002b.gms"
+    },
+    {
+      "name": "pldd003b",
+      "type": "VI",
+      "file": "VI/pldd003b.gms"
+    },
+    {
+      "name": "pldd004b",
+      "type": "VI",
+      "file": "VI/pldd004b.gms"
+    },
+    {
+      "name": "pldd005b",
+      "type": "VI",
+      "file": "VI/pldd005b.gms"
+    },
+    {
+      "name": "pldd006b",
+      "type": "VI",
+      "file": "VI/pldd006b.gms"
+    },
+    {
+      "name": "pldd007b",
+      "type": "VI",
+      "file": "VI/pldd007b.gms"
+    },
+    {
+      "name": "pldd008b",
+      "type": "VI",
+      "file": "VI/pldd008b.gms"
+    },
+    {
+      "name": "pldd009b",
+      "type": "VI",
+      "file": "VI/pldd009b.gms"
+    },
+    {
+      "name": "pldd010b",
+      "type": "VI",
+      "file": "VI/pldd010b.gms"
+    },
+    {
+      "name": "pldd011b",
+      "type": "VI",
+      "file": "VI/pldd011b.gms"
+    },
+    {
+      "name": "pldd012b",
+      "type": "VI",
+      "file": "VI/pldd012b.gms"
+    },
+    {
+      "name": "pltexpa2-16",
+      "type": "VI",
+      "file": "VI/pltexpa2-16.gms"
+    },
+    {
+      "name": "pltexpa2-6",
+      "type": "VI",
+      "file": "VI/pltexpa2-6.gms"
+    },
+    {
+      "name": "pltexpa3_16",
+      "type": "VI",
+      "file": "VI/pltexpa3_16.gms"
+    },
+    {
+      "name": "pltexpa3_6",
+      "type": "VI",
+      "file": "VI/pltexpa3_6.gms"
+    },
+    {
+      "name": "pltexpa4_6",
+      "type": "VI",
+      "file": "VI/pltexpa4_6.gms"
+    },
+    {
+      "name": "primagaz",
+      "type": "VI",
+      "file": "VI/primagaz.gms"
+    },
+    {
+      "name": "problem",
+      "type": "VI",
+      "file": "VI/problem.gms"
+    },
+    {
+      "name": "progas",
+      "type": "VI",
+      "file": "VI/progas.gms"
+    },
+    {
+      "name": "qap08",
+      "type": "VI",
+      "file": "VI/qap08.gms"
+    },
+    {
+      "name": "qap12",
+      "type": "VI",
+      "file": "VI/qap12.gms"
+    },
+    {
+      "name": "qap15",
+      "type": "VI",
+      "file": "VI/qap15.gms"
+    },
+    {
+      "name": "qiulp",
+      "type": "VI",
+      "file": "VI/qiulp.gms"
+    },
+    {
+      "name": "qual",
+      "type": "VI",
+      "file": "VI/qual.gms"
+    },
+    {
+      "name": "r05",
+      "type": "VI",
+      "file": "VI/r05.gms"
+    },
+    {
+      "name": "rail2586",
+      "type": "VI",
+      "file": "VI/rail2586.gms"
+    },
+    {
+      "name": "rail4284",
+      "type": "VI",
+      "file": "VI/rail4284.gms"
+    },
+    {
+      "name": "rail507",
+      "type": "VI",
+      "file": "VI/rail507.gms"
+    },
+    {
+      "name": "rail516",
+      "type": "VI",
+      "file": "VI/rail516.gms"
+    },
+    {
+      "name": "rail582",
+      "type": "VI",
+      "file": "VI/rail582.gms"
+    },
+    {
+      "name": "rat1",
+      "type": "VI",
+      "file": "VI/rat1.gms"
+    },
+    {
+      "name": "rat5",
+      "type": "VI",
+      "file": "VI/rat5.gms"
+    },
+    {
+      "name": "rat7a",
+      "type": "VI",
+      "file": "VI/rat7a.gms"
+    },
+    {
+      "name": "reactor",
+      "type": "VI",
+      "file": "VI/reactor.gms"
+    },
+    {
+      "name": "recipe",
+      "type": "VI",
+      "file": "VI/recipe.gms"
+    },
+    {
+      "name": "refine",
+      "type": "VI",
+      "file": "VI/refine.gms"
+    },
+    {
+      "name": "refinery",
+      "type": "VI",
+      "file": "VI/refinery.gms"
+    },
+    {
+      "name": "rlfddd",
+      "type": "VI",
+      "file": "VI/rlfddd.gms"
+    },
+    {
+      "name": "rlfdual",
+      "type": "VI",
+      "file": "VI/rlfdual.gms"
+    },
+    {
+      "name": "rlfprim",
+      "type": "VI",
+      "file": "VI/rlfprim.gms"
+    },
+    {
+      "name": "rosen1",
+      "type": "VI",
+      "file": "VI/rosen1.gms"
+    },
+    {
+      "name": "rosen10",
+      "type": "VI",
+      "file": "VI/rosen10.gms"
+    },
+    {
+      "name": "rosen2",
+      "type": "VI",
+      "file": "VI/rosen2.gms"
+    },
+    {
+      "name": "rosen7",
+      "type": "VI",
+      "file": "VI/rosen7.gms"
+    },
+    {
+      "name": "rosen8",
+      "type": "VI",
+      "file": "VI/rosen8.gms"
+    },
+    {
+      "name": "route",
+      "type": "VI",
+      "file": "VI/route.gms"
+    },
+    {
+      "name": "sc105",
+      "type": "VI",
+      "file": "VI/sc105.gms"
+    },
+    {
+      "name": "sc205-2r-100",
+      "type": "VI",
+      "file": "VI/sc205-2r-100.gms"
+    },
+    {
+      "name": "sc205-2r-16",
+      "type": "VI",
+      "file": "VI/sc205-2r-16.gms"
+    },
+    {
+      "name": "sc205-2r-1600",
+      "type": "VI",
+      "file": "VI/sc205-2r-1600.gms"
+    },
+    {
+      "name": "sc205-2r-200",
+      "type": "VI",
+      "file": "VI/sc205-2r-200.gms"
+    },
+    {
+      "name": "sc205-2r-27",
+      "type": "VI",
+      "file": "VI/sc205-2r-27.gms"
+    },
+    {
+      "name": "sc205-2r-32",
+      "type": "VI",
+      "file": "VI/sc205-2r-32.gms"
+    },
+    {
+      "name": "sc205-2r-4",
+      "type": "VI",
+      "file": "VI/sc205-2r-4.gms"
+    },
+    {
+      "name": "sc205-2r-400",
+      "type": "VI",
+      "file": "VI/sc205-2r-400.gms"
+    },
+    {
+      "name": "sc205-2r-50",
+      "type": "VI",
+      "file": "VI/sc205-2r-50.gms"
+    },
+    {
+      "name": "sc205-2r-64",
+      "type": "VI",
+      "file": "VI/sc205-2r-64.gms"
+    },
+    {
+      "name": "sc205-2r-8",
+      "type": "VI",
+      "file": "VI/sc205-2r-8.gms"
+    },
+    {
+      "name": "sc205-2r-800",
+      "type": "VI",
+      "file": "VI/sc205-2r-800.gms"
+    },
+    {
+      "name": "sc205",
+      "type": "VI",
+      "file": "VI/sc205.gms"
+    },
+    {
+      "name": "sc50a",
+      "type": "VI",
+      "file": "VI/sc50a.gms"
+    },
+    {
+      "name": "sc50b",
+      "type": "VI",
+      "file": "VI/sc50b.gms"
+    },
+    {
+      "name": "scagr25",
+      "type": "VI",
+      "file": "VI/scagr25.gms"
+    },
+    {
+      "name": "scagr7-2b-16",
+      "type": "VI",
+      "file": "VI/scagr7-2b-16.gms"
+    },
+    {
+      "name": "scagr7-2b-4",
+      "type": "VI",
+      "file": "VI/scagr7-2b-4.gms"
+    },
+    {
+      "name": "scagr7-2b-64",
+      "type": "VI",
+      "file": "VI/scagr7-2b-64.gms"
+    },
+    {
+      "name": "scagr7-2c-16",
+      "type": "VI",
+      "file": "VI/scagr7-2c-16.gms"
+    },
+    {
+      "name": "scagr7-2c-4",
+      "type": "VI",
+      "file": "VI/scagr7-2c-4.gms"
+    },
+    {
+      "name": "scagr7-2c-64",
+      "type": "VI",
+      "file": "VI/scagr7-2c-64.gms"
+    },
+    {
+      "name": "scagr7-2r-108",
+      "type": "VI",
+      "file": "VI/scagr7-2r-108.gms"
+    },
+    {
+      "name": "scagr7-2r-16",
+      "type": "VI",
+      "file": "VI/scagr7-2r-16.gms"
+    },
+    {
+      "name": "scagr7-2r-216",
+      "type": "VI",
+      "file": "VI/scagr7-2r-216.gms"
+    },
+    {
+      "name": "scagr7-2r-27",
+      "type": "VI",
+      "file": "VI/scagr7-2r-27.gms"
+    },
+    {
+      "name": "scagr7-2r-32",
+      "type": "VI",
+      "file": "VI/scagr7-2r-32.gms"
+    },
+    {
+      "name": "scagr7-2r-4",
+      "type": "VI",
+      "file": "VI/scagr7-2r-4.gms"
+    },
+    {
+      "name": "scagr7-2r-432",
+      "type": "VI",
+      "file": "VI/scagr7-2r-432.gms"
+    },
+    {
+      "name": "scagr7-2r-54",
+      "type": "VI",
+      "file": "VI/scagr7-2r-54.gms"
+    },
+    {
+      "name": "scagr7-2r-64",
+      "type": "VI",
+      "file": "VI/scagr7-2r-64.gms"
+    },
+    {
+      "name": "scagr7-2r-8",
+      "type": "VI",
+      "file": "VI/scagr7-2r-8.gms"
+    },
+    {
+      "name": "scagr7-2r-864",
+      "type": "VI",
+      "file": "VI/scagr7-2r-864.gms"
+    },
+    {
+      "name": "scagr7",
+      "type": "VI",
+      "file": "VI/scagr7.gms"
+    },
+    {
+      "name": "scfxm1-2b-16",
+      "type": "VI",
+      "file": "VI/scfxm1-2b-16.gms"
+    },
+    {
+      "name": "scfxm1-2b-4",
+      "type": "VI",
+      "file": "VI/scfxm1-2b-4.gms"
+    },
+    {
+      "name": "scfxm1-2b-64",
+      "type": "VI",
+      "file": "VI/scfxm1-2b-64.gms"
+    },
+    {
+      "name": "scfxm1-2c-4",
+      "type": "VI",
+      "file": "VI/scfxm1-2c-4.gms"
+    },
+    {
+      "name": "scfxm1-2r-128",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-128.gms"
+    },
+    {
+      "name": "scfxm1-2r-16",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-16.gms"
+    },
+    {
+      "name": "scfxm1-2r-256",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-256.gms"
+    },
+    {
+      "name": "scfxm1-2r-27",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-27.gms"
+    },
+    {
+      "name": "scfxm1-2r-32",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-32.gms"
+    },
+    {
+      "name": "scfxm1-2r-4",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-4.gms"
+    },
+    {
+      "name": "scfxm1-2r-64",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-64.gms"
+    },
+    {
+      "name": "scfxm1-2r-8",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-8.gms"
+    },
+    {
+      "name": "scfxm1-2r-96",
+      "type": "VI",
+      "file": "VI/scfxm1-2r-96.gms"
+    },
+    {
+      "name": "scfxm1",
+      "type": "VI",
+      "file": "VI/scfxm1.gms"
+    },
+    {
+      "name": "scfxm2",
+      "type": "VI",
+      "file": "VI/scfxm2.gms"
+    },
+    {
+      "name": "scfxm3",
+      "type": "VI",
+      "file": "VI/scfxm3.gms"
+    },
+    {
+      "name": "scorpion",
+      "type": "VI",
+      "file": "VI/scorpion.gms"
+    },
+    {
+      "name": "scrs8-2b-16",
+      "type": "VI",
+      "file": "VI/scrs8-2b-16.gms"
+    },
+    {
+      "name": "scrs8-2b-4",
+      "type": "VI",
+      "file": "VI/scrs8-2b-4.gms"
+    },
+    {
+      "name": "scrs8-2b-64",
+      "type": "VI",
+      "file": "VI/scrs8-2b-64.gms"
+    },
+    {
+      "name": "scrs8-2c-16",
+      "type": "VI",
+      "file": "VI/scrs8-2c-16.gms"
+    },
+    {
+      "name": "scrs8-2c-32",
+      "type": "VI",
+      "file": "VI/scrs8-2c-32.gms"
+    },
+    {
+      "name": "scrs8-2c-4",
+      "type": "VI",
+      "file": "VI/scrs8-2c-4.gms"
+    },
+    {
+      "name": "scrs8-2c-64",
+      "type": "VI",
+      "file": "VI/scrs8-2c-64.gms"
+    },
+    {
+      "name": "scrs8-2c-8",
+      "type": "VI",
+      "file": "VI/scrs8-2c-8.gms"
+    },
+    {
+      "name": "scrs8-2r-128",
+      "type": "VI",
+      "file": "VI/scrs8-2r-128.gms"
+    },
+    {
+      "name": "scrs8-2r-16",
+      "type": "VI",
+      "file": "VI/scrs8-2r-16.gms"
+    },
+    {
+      "name": "scrs8-2r-256",
+      "type": "VI",
+      "file": "VI/scrs8-2r-256.gms"
+    },
+    {
+      "name": "scrs8-2r-27",
+      "type": "VI",
+      "file": "VI/scrs8-2r-27.gms"
+    },
+    {
+      "name": "scrs8-2r-32",
+      "type": "VI",
+      "file": "VI/scrs8-2r-32.gms"
+    },
+    {
+      "name": "scrs8-2r-4",
+      "type": "VI",
+      "file": "VI/scrs8-2r-4.gms"
+    },
+    {
+      "name": "scrs8-2r-512",
+      "type": "VI",
+      "file": "VI/scrs8-2r-512.gms"
+    },
+    {
+      "name": "scrs8-2r-64",
+      "type": "VI",
+      "file": "VI/scrs8-2r-64.gms"
+    },
+    {
+      "name": "scrs8-2r-64b",
+      "type": "VI",
+      "file": "VI/scrs8-2r-64b.gms"
+    },
+    {
+      "name": "scrs8-2r-8",
+      "type": "VI",
+      "file": "VI/scrs8-2r-8.gms"
+    },
+    {
+      "name": "scrs8",
+      "type": "VI",
+      "file": "VI/scrs8.gms"
+    },
+    {
+      "name": "scsd1",
+      "type": "VI",
+      "file": "VI/scsd1.gms"
+    },
+    {
+      "name": "scsd6",
+      "type": "VI",
+      "file": "VI/scsd6.gms"
+    },
+    {
+      "name": "scsd8-2b-16",
+      "type": "VI",
+      "file": "VI/scsd8-2b-16.gms"
+    },
+    {
+      "name": "scsd8-2b-4",
+      "type": "VI",
+      "file": "VI/scsd8-2b-4.gms"
+    },
+    {
+      "name": "scsd8-2b-64",
+      "type": "VI",
+      "file": "VI/scsd8-2b-64.gms"
+    },
+    {
+      "name": "scsd8-2c-16",
+      "type": "VI",
+      "file": "VI/scsd8-2c-16.gms"
+    },
+    {
+      "name": "scsd8-2c-4",
+      "type": "VI",
+      "file": "VI/scsd8-2c-4.gms"
+    },
+    {
+      "name": "scsd8-2c-64",
+      "type": "VI",
+      "file": "VI/scsd8-2c-64.gms"
+    },
+    {
+      "name": "scsd8-2r-108",
+      "type": "VI",
+      "file": "VI/scsd8-2r-108.gms"
+    },
+    {
+      "name": "scsd8-2r-16",
+      "type": "VI",
+      "file": "VI/scsd8-2r-16.gms"
+    },
+    {
+      "name": "scsd8-2r-216",
+      "type": "VI",
+      "file": "VI/scsd8-2r-216.gms"
+    },
+    {
+      "name": "scsd8-2r-27",
+      "type": "VI",
+      "file": "VI/scsd8-2r-27.gms"
+    },
+    {
+      "name": "scsd8-2r-32",
+      "type": "VI",
+      "file": "VI/scsd8-2r-32.gms"
+    },
+    {
+      "name": "scsd8-2r-4",
+      "type": "VI",
+      "file": "VI/scsd8-2r-4.gms"
+    },
+    {
+      "name": "scsd8-2r-432",
+      "type": "VI",
+      "file": "VI/scsd8-2r-432.gms"
+    },
+    {
+      "name": "scsd8-2r-54",
+      "type": "VI",
+      "file": "VI/scsd8-2r-54.gms"
+    },
+    {
+      "name": "scsd8-2r-64",
+      "type": "VI",
+      "file": "VI/scsd8-2r-64.gms"
+    },
+    {
+      "name": "scsd8-2r-8",
+      "type": "VI",
+      "file": "VI/scsd8-2r-8.gms"
+    },
+    {
+      "name": "scsd8-2r-8b",
+      "type": "VI",
+      "file": "VI/scsd8-2r-8b.gms"
+    },
+    {
+      "name": "scsd8",
+      "type": "VI",
+      "file": "VI/scsd8.gms"
+    },
+    {
+      "name": "sctap1-2b-16",
+      "type": "VI",
+      "file": "VI/sctap1-2b-16.gms"
+    },
+    {
+      "name": "sctap1-2b-4",
+      "type": "VI",
+      "file": "VI/sctap1-2b-4.gms"
+    },
+    {
+      "name": "sctap1-2b-64",
+      "type": "VI",
+      "file": "VI/sctap1-2b-64.gms"
+    },
+    {
+      "name": "sctap1-2c-16",
+      "type": "VI",
+      "file": "VI/sctap1-2c-16.gms"
+    },
+    {
+      "name": "sctap1-2c-4",
+      "type": "VI",
+      "file": "VI/sctap1-2c-4.gms"
+    },
+    {
+      "name": "sctap1-2c-64",
+      "type": "VI",
+      "file": "VI/sctap1-2c-64.gms"
+    },
+    {
+      "name": "sctap1-2r-108",
+      "type": "VI",
+      "file": "VI/sctap1-2r-108.gms"
+    },
+    {
+      "name": "sctap1-2r-16",
+      "type": "VI",
+      "file": "VI/sctap1-2r-16.gms"
+    },
+    {
+      "name": "sctap1-2r-216",
+      "type": "VI",
+      "file": "VI/sctap1-2r-216.gms"
+    },
+    {
+      "name": "sctap1-2r-27",
+      "type": "VI",
+      "file": "VI/sctap1-2r-27.gms"
+    },
+    {
+      "name": "sctap1-2r-32",
+      "type": "VI",
+      "file": "VI/sctap1-2r-32.gms"
+    },
+    {
+      "name": "sctap1-2r-4",
+      "type": "VI",
+      "file": "VI/sctap1-2r-4.gms"
+    },
+    {
+      "name": "sctap1-2r-480",
+      "type": "VI",
+      "file": "VI/sctap1-2r-480.gms"
+    },
+    {
+      "name": "sctap1-2r-54",
+      "type": "VI",
+      "file": "VI/sctap1-2r-54.gms"
+    },
+    {
+      "name": "sctap1-2r-64",
+      "type": "VI",
+      "file": "VI/sctap1-2r-64.gms"
+    },
+    {
+      "name": "sctap1-2r-8",
+      "type": "VI",
+      "file": "VI/sctap1-2r-8.gms"
+    },
+    {
+      "name": "sctap1-2r-8b",
+      "type": "VI",
+      "file": "VI/sctap1-2r-8b.gms"
+    },
+    {
+      "name": "sctap1",
+      "type": "VI",
+      "file": "VI/sctap1.gms"
+    },
+    {
+      "name": "sctap2",
+      "type": "VI",
+      "file": "VI/sctap2.gms"
+    },
+    {
+      "name": "sctap3",
+      "type": "VI",
+      "file": "VI/sctap3.gms"
+    },
+    {
+      "name": "seba",
+      "type": "VI",
+      "file": "VI/seba.gms"
+    },
+    {
+      "name": "self",
+      "type": "VI",
+      "file": "VI/self.gms"
+    },
+    {
+      "name": "seymourl",
+      "type": "VI",
+      "file": "VI/seymourl.gms"
+    },
+    {
+      "name": "sgpf5y6",
+      "type": "VI",
+      "file": "VI/sgpf5y6.gms"
+    },
+    {
+      "name": "share1b",
+      "type": "VI",
+      "file": "VI/share1b.gms"
+    },
+    {
+      "name": "share2b",
+      "type": "VI",
+      "file": "VI/share2b.gms"
+    },
+    {
+      "name": "shell",
+      "type": "VI",
+      "file": "VI/shell.gms"
+    },
+    {
+      "name": "ship04l",
+      "type": "VI",
+      "file": "VI/ship04l.gms"
+    },
+    {
+      "name": "ship04s",
+      "type": "VI",
+      "file": "VI/ship04s.gms"
+    },
+    {
+      "name": "ship08l",
+      "type": "VI",
+      "file": "VI/ship08l.gms"
+    },
+    {
+      "name": "ship08s",
+      "type": "VI",
+      "file": "VI/ship08s.gms"
+    },
+    {
+      "name": "ship12l",
+      "type": "VI",
+      "file": "VI/ship12l.gms"
+    },
+    {
+      "name": "ship12s",
+      "type": "VI",
+      "file": "VI/ship12s.gms"
+    },
+    {
+      "name": "sierra",
+      "type": "VI",
+      "file": "VI/sierra.gms"
+    },
+    {
+      "name": "slptsk",
+      "type": "VI",
+      "file": "VI/slptsk.gms"
+    },
+    {
+      "name": "small000",
+      "type": "VI",
+      "file": "VI/small000.gms"
+    },
+    {
+      "name": "small001",
+      "type": "VI",
+      "file": "VI/small001.gms"
+    },
+    {
+      "name": "small002",
+      "type": "VI",
+      "file": "VI/small002.gms"
+    },
+    {
+      "name": "small003",
+      "type": "VI",
+      "file": "VI/small003.gms"
+    },
+    {
+      "name": "small004",
+      "type": "VI",
+      "file": "VI/small004.gms"
+    },
+    {
+      "name": "small005",
+      "type": "VI",
+      "file": "VI/small005.gms"
+    },
+    {
+      "name": "small006",
+      "type": "VI",
+      "file": "VI/small006.gms"
+    },
+    {
+      "name": "small007",
+      "type": "VI",
+      "file": "VI/small007.gms"
+    },
+    {
+      "name": "small008",
+      "type": "VI",
+      "file": "VI/small008.gms"
+    },
+    {
+      "name": "small009",
+      "type": "VI",
+      "file": "VI/small009.gms"
+    },
+    {
+      "name": "small010",
+      "type": "VI",
+      "file": "VI/small010.gms"
+    },
+    {
+      "name": "small011",
+      "type": "VI",
+      "file": "VI/small011.gms"
+    },
+    {
+      "name": "small012",
+      "type": "VI",
+      "file": "VI/small012.gms"
+    },
+    {
+      "name": "small013",
+      "type": "VI",
+      "file": "VI/small013.gms"
+    },
+    {
+      "name": "small014",
+      "type": "VI",
+      "file": "VI/small014.gms"
+    },
+    {
+      "name": "small015",
+      "type": "VI",
+      "file": "VI/small015.gms"
+    },
+    {
+      "name": "small016",
+      "type": "VI",
+      "file": "VI/small016.gms"
+    },
+    {
+      "name": "south31",
+      "type": "VI",
+      "file": "VI/south31.gms"
+    },
+    {
+      "name": "stair",
+      "type": "VI",
+      "file": "VI/stair.gms"
+    },
+    {
+      "name": "standata",
+      "type": "VI",
+      "file": "VI/standata.gms"
+    },
+    {
+      "name": "standgub",
+      "type": "VI",
+      "file": "VI/standgub.gms"
+    },
+    {
+      "name": "standmps",
+      "type": "VI",
+      "file": "VI/standmps.gms"
+    },
+    {
+      "name": "stocfor1",
+      "type": "VI",
+      "file": "VI/stocfor1.gms"
+    },
+    {
+      "name": "stocfor2",
+      "type": "VI",
+      "file": "VI/stocfor2.gms"
+    },
+    {
+      "name": "stocfor3",
+      "type": "VI",
+      "file": "VI/stocfor3.gms"
+    },
+    {
+      "name": "stormg2-125",
+      "type": "VI",
+      "file": "VI/stormg2-125.gms"
+    },
+    {
+      "name": "stormg2-27",
+      "type": "VI",
+      "file": "VI/stormg2-27.gms"
+    },
+    {
+      "name": "stormg2-8",
+      "type": "VI",
+      "file": "VI/stormg2-8.gms"
+    },
+    {
+      "name": "stormg2_1000",
+      "type": "VI",
+      "file": "VI/stormg2_1000.gms"
+    },
+    {
+      "name": "sws",
+      "type": "VI",
+      "file": "VI/sws.gms"
+    },
+    {
+      "name": "t0331-4l",
+      "type": "VI",
+      "file": "VI/t0331-4l.gms"
+    },
+    {
+      "name": "testbig",
+      "type": "VI",
+      "file": "VI/testbig.gms"
+    },
+    {
+      "name": "truss",
+      "type": "VI",
+      "file": "VI/truss.gms"
+    },
+    {
+      "name": "tuff",
+      "type": "VI",
+      "file": "VI/tuff.gms"
+    },
+    {
+      "name": "ulevimin",
+      "type": "VI",
+      "file": "VI/ulevimin.gms"
+    },
+    {
+      "name": "us04",
+      "type": "VI",
+      "file": "VI/us04.gms"
+    },
+    {
+      "name": "vol1",
+      "type": "VI",
+      "file": "VI/vol1.gms"
+    },
+    {
+      "name": "vtp-base",
+      "type": "VI",
+      "file": "VI/vtp-base.gms"
+    },
+    {
+      "name": "watson_1",
+      "type": "VI",
+      "file": "VI/watson_1.gms"
+    },
+    {
+      "name": "wood1p",
+      "type": "VI",
+      "file": "VI/wood1p.gms"
+    },
+    {
+      "name": "woodinfe",
+      "type": "VI",
+      "file": "VI/woodinfe.gms"
+    },
+    {
+      "name": "woodw",
+      "type": "VI",
+      "file": "VI/woodw.gms"
+    },
+    {
+      "name": "world",
+      "type": "VI",
+      "file": "VI/world.gms"
+    },
+    {
+      "name": "zed",
+      "type": "VI",
+      "file": "VI/zed.gms"
+    }
+  ]
+}

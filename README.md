@@ -25,6 +25,7 @@ The `solver` entry in the current checkout is an empty placeholder file. Experim
 | Path | Purpose |
 | --- | --- |
 | [`extractProblem.py`](extractProblem.py) | List available models or extract an MCP/VI instance. |
+| [`problems.json`](problems.json) | Central registry of problem names, types, and source files used by `list`. |
 | [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
 | [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
 | [`VI/LINLib/`](VI/LINLib/) | LINLib instances and scripts for reformulating continuous LPs as VIs/MCPs. |
@@ -105,7 +106,9 @@ This VI model has a fixed mesh in its source file, so the example does not pass 
 
 Extraction uses GAMS compilation (`action=c`, `dumpOpt=21`) to expand the selected source without executing its solve statements. Models already expressed as MCPs can then be solved from `tempMCP.gms`. Embedded GAMS code that writes `poly.txt` is retained in the extracted source. A source model that uses EMP still requires the corresponding EMP solver when executed.
 
-The `list` command reports only `.gms` files directly inside `MCP/` or `VI/`. It does not enumerate nested GDX datasets or distinguish model files from helper files. Consult the model source and the collection-specific documentation for any additional inputs. In particular, `exampleVI` in the thesis is an example of a model users can add, rather than an existing top-level model in this checkout.
+The `list` command reads the central [`problems.json`](problems.json) registry and prints registered model names for the requested type in alphabetical order. Only models whose source files exist locally are printed; missing registered files produce warnings on standard error. Unregistered files and helper scripts are not listed. For example, the dataset loader `VI/vimod.gms` is not registered as a standalone problem.
+
+The registry includes the large generated models excluded from Git. Their registrations remain valid when the corresponding files are missing from a checkout; generate the files locally to make them available for listing and extraction. Consult the collection-specific documentation for model inputs. The thesis's `exampleVI` is an example users can add rather than an existing registered problem.
 
 Help is available with:
 
@@ -280,6 +283,22 @@ The main files are:
 - [`FischerBurmeisterMacros/`](stochastic_equilibrium/FischerBurmeisterMacros/): residual evaluation for the demand specifications.
 
 ## Adding new MCP and VI models
+
+### Registering problems for listing
+
+Add an entry to the `problems` array in [`problems.json`](problems.json) when adding a model. Each entry contains its name without the `.gms` extension, its type (`MCP` or `VI`), and its repository-relative source path. For example:
+
+```json
+{
+  "name": "myMCP",
+  "type": "MCP",
+  "file": "MCP/myMCP.gms"
+}
+```
+
+Each `(type, name)` pair must be unique, and `file` must match `<type>/<name>.gms`. A name can be registered separately under both types. Keep parameter defaults in the GAMS source. Removing an entry removes that problem from the listing without deleting its source file.
+
+For now, the registry controls the `list` command. Extraction continues to select an existing `.gms` file directly using `--type` and `--select`.
 
 ### MCP models
 

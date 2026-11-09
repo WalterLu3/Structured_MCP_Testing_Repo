@@ -1,11 +1,13 @@
-"""List standalone MCP/VI models or extract one as tempMCP.gms.
+"""List registered MCP/VI models or extract a standalone model as tempMCP.gms.
 
-Models are read from MCP/ or VI/ beside this script. Extraction calls GAMS
+The problem catalog is stored in problems.json beside this script.
+Models are read from MCP/ or VI/. Extraction calls GAMS
 directly to expand the selected source and its compile-time parameters.
 The expanded source keeps its solve statements for the user to run later.
 """
 
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -29,7 +31,7 @@ def parse_arguments(argv=None):
         "extract", help="Extract a problem instance."
     )
     list_parser = subparsers.add_parser(
-        "list", help="List available problem instances."
+        "list", help="List registered problem instances available locally."
     )
     list_parser.add_argument(
         "--type",
@@ -138,6 +140,44 @@ def print_arguments(args):
         print(f"  {name} = {value}")
 
 
+def load_problem_records(base_dir):
+    """Read the central catalog and validate names, categories, and source paths."""
+    registry = base_dir / "problems.json"
+    try:
+        data = json.loads(registry.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Invalid JSON in {registry}: {error.msg} (line {error.lineno})"
+        ) from error
+    if not isinstance(data, dict) or not isinstance(data.get("problems"), list):
+        raise ValueError(f"{registry} must contain a 'problems' array")
+
+    seen = set()
+    for index, record in enumerate(data["problems"], 1):
+        if not isinstance(record, dict) or any(
+            not isinstance(record.get(field), str) for field in ("name", "type", "file")
+        ):
+            raise ValueError(f"Problem record {index} needs string fields: name, type, file")
+        name, category = record["name"], record["type"]
+        if category not in {"MCP", "VI"}:
+            raise ValueError(f"Problem record {index}: type must be MCP or VI")
+        if (not name or name in {".", ".."}
+                or Path(name).name != name or "\\" in name):
+            raise ValueError(f"Problem record {index}: name must be a model name without directories")
+        # Keep catalog names consistent with the existing --type/--select lookup.
+        expected = f"{category}/{name}.gms"
+        if record["file"] != expected:
+            raise ValueError(f"Problem record {index}: file must be {expected}")
+        key = (category, name)
+        if key in seen:
+            raise ValueError(f"Duplicate problem registration: {category}/{name}")
+        seen.add(key)
+
+    # Missing source files are not a corrupt catalog: large generated models
+    # may be registered but absent from a checkout because Git ignores them.
+    return data["problems"]
+
+
 def extract_problem(args, base_dir):
     """Expand a standalone GAMS model and return the path to tempMCP.gms."""
     # A selection is a model name, not a path outside the chosen model folder.
@@ -207,11 +247,25 @@ def main(argv=None):
     args = parse_arguments(argv)
 
     if args.command == "list":
-        # List top-level model names without invoking GAMS or executing models.
-        problem_dir = BASE_DIR / args.type
-        for path in sorted(problem_dir.glob("*.gms")):
-            if path.is_file():
-                print(path.stem)
+        # Registration determines which files are problems; do not scan folders.
+        try:
+            records = load_problem_records(BASE_DIR)
+        except (OSError, ValueError) as error:
+            print(f"Cannot list problems: {error}", file=sys.stderr)
+            return 1
+        selected = sorted(
+            (record for record in records if record["type"] == args.type),
+            key=lambda record: record["name"],
+        )
+        for record in selected:
+            if (BASE_DIR / record["file"]).is_file():
+                print(record["name"])
+            else:
+                print(
+                    f"Warning: registered problem {args.type}/{record['name']} "
+                    f"is unavailable; missing model file: {record['file']}",
+                    file=sys.stderr,
+                )
         return 0
 
     print_arguments(args)

@@ -2,6 +2,7 @@
 
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+import json
 from pathlib import Path
 import re
 import shutil
@@ -30,6 +31,13 @@ class ExtractionTests(unittest.TestCase):
         for category in ("MCP", "VI"):
             (self.root / category).mkdir()
             (self.root / category / "example.gms").write_text("* A standalone model\n")
+        self.write_records([
+            {"name": "example", "type": category, "file": f"{category}/example.gms"}
+            for category in ("MCP", "VI")
+        ])
+
+    def write_records(self, records):
+        (self.root / "problems.json").write_text(json.dumps({"problems": records}))
 
     def arguments(self, category="MCP", *options):
         return extraction.parse_arguments(["extract", "--type", category, "--select", "example", *options])
@@ -130,6 +138,11 @@ class ExtractionTests(unittest.TestCase):
         (self.root / "VI" / "aaa.gms").write_text("* Another model\n")
         (self.root / "VI" / "helper.py").write_text("")
         (self.root / "VI" / "directory.gms").mkdir()
+        self.write_records([
+            {"name": "example", "type": "VI", "file": "VI/example.gms"},
+            {"name": "aaa", "type": "VI", "file": "VI/aaa.gms"},
+            {"name": "example", "type": "MCP", "file": "MCP/example.gms"},
+        ])
         output = StringIO()
         with patch.object(extraction, "BASE_DIR", self.root), patch.object(
             extraction.subprocess, "run"
@@ -138,6 +151,85 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(output.getvalue().splitlines(), ["aaa", "example"])
         run.assert_not_called()
+
+    def test_unregistered_model_is_not_listed(self):
+        (self.root / "VI" / "unregistered.gms").write_text("* Not in the catalog\n")
+        output = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(output):
+            code = extraction.main(["list", "--type", "VI"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue().splitlines(), ["example"])
+
+    def test_missing_registered_model_warns_without_invalidating_catalog(self):
+        (self.root / "VI" / "example.gms").unlink()
+        output, error = StringIO(), StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
+            extraction.subprocess, "run"
+        ) as run, redirect_stdout(output), redirect_stderr(error):
+            code = extraction.main(["list", "--type", "VI"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue(), "")
+        self.assertIn("missing model file: VI/example.gms", error.getvalue())
+        self.assertEqual(len(extraction.load_problem_records(self.root)), 2)
+        run.assert_not_called()
+
+    def test_missing_other_category_does_not_affect_requested_list(self):
+        (self.root / "MCP" / "example.gms").unlink()
+        output, error = StringIO(), StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(output), redirect_stderr(error):
+            code = extraction.main(["list", "--type", "VI"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue().splitlines(), ["example"])
+        self.assertEqual(error.getvalue(), "")
+
+    def test_missing_registry_reports_an_error_instead_of_scanning_folders(self):
+        (self.root / "problems.json").unlink()
+        output, error = StringIO(), StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(output), redirect_stderr(error):
+            code = extraction.main(["list", "--type", "VI"])
+        self.assertEqual(code, 1)
+        self.assertEqual(output.getvalue(), "")
+        self.assertIn("problems.json", error.getvalue())
+
+    def test_invalid_json_reports_a_readable_error(self):
+        (self.root / "problems.json").write_text('{"problems": [')
+        error = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stderr(error):
+            code = extraction.main(["list", "--type", "MCP"])
+        self.assertEqual(code, 1)
+        self.assertIn("Invalid JSON", error.getvalue())
+
+    def test_rejects_invalid_records_and_paths(self):
+        valid = {"name": "example", "type": "VI", "file": "VI/example.gms"}
+        for record in (
+            None, {}, {**valid, "name": 3}, {**valid, "type": "LP"},
+            {**valid, "name": "../example"}, {**valid, "file": "../example.gms"},
+            {**valid, "file": "MCP/example.gms"}, {**valid, "file": "/VI/example.gms"},
+        ):
+            with self.subTest(record=record):
+                self.write_records([record])
+                with self.assertRaises(ValueError):
+                    extraction.load_problem_records(self.root)
+        for data in ([], {}, {"problems": {}}):
+            with self.subTest(data=data):
+                (self.root / "problems.json").write_text(json.dumps(data))
+                with self.assertRaises(ValueError):
+                    extraction.load_problem_records(self.root)
+
+    def test_rejects_duplicate_names_within_a_category(self):
+        record = {"name": "example", "type": "VI", "file": "VI/example.gms"}
+        self.write_records([record, record])
+        with self.assertRaisesRegex(ValueError, "Duplicate problem registration: VI/example"):
+            extraction.load_problem_records(self.root)
+
+    def test_extraction_still_works_without_the_listing_registry(self):
+        (self.root / "problems.json").unlink()
+        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
+            extraction.subprocess, "run", side_effect=self.successful_compile
+        ), redirect_stdout(StringIO()):
+            code = extraction.main(["extract", "--type", "MCP", "--select", "example"])
+        self.assertEqual(code, 0)
+        self.assertTrue((self.root / "tempMCP.gms").is_file())
 
     def test_cli_reports_compiler_failure_without_a_python_traceback(self):
         error = StringIO()
