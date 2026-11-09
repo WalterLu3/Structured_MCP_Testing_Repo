@@ -112,6 +112,18 @@ python3 extractProblem.py extract --help
 
 Although the top-level parser still displays some stochastic experiment arguments, the supported extraction types are `MCP` and `VI`. Use the GAMS entry points below for stochastic experiments.
 
+### Generating the LINLib LP collection
+
+Export the continuous LPs in `VI/LINLib/instances/` as standalone `VI/<instance>.gms` models:
+
+```bash
+python3 VI/LINLib/generate_instances.py --verify
+```
+
+Each generated file includes GAMS code that writes its own `poly.txt` before the final solve. For example, `VI/agg.gms` contains the MCP formulation for `agg` and the matching polyhedral row information. The original GDX file is not required to run that exported model.
+
+The batch generator skips non-LP instances and existing output files. Use `--select agg` to select an instance or `--overwrite` to rebuild exports. With `--verify`, it checks each model's poly writer in a temporary directory with the final solve disabled. Results are recorded in `VI/LINLib/generation_report.json`. See the [LINLib instructions](VI/LINLib/README.md) for filtering, fallback exports, and additional options.
+
 ## PATHVI experiments
 
 The PATHVI experiments compare three crash configurations: PNewton, Lemke ray start, and PATHVI ray start. First extract a model with VI structure, such as `bert_oc`, as shown above.
