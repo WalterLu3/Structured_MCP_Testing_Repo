@@ -24,8 +24,9 @@ The `solver` entry in the current checkout is an empty placeholder file. Experim
 
 | Path | Purpose |
 | --- | --- |
-| [`extractProblem.py`](extractProblem.py) | List available models or extract an MCP/VI instance. |
-| [`problems.json`](problems.json) | Central registry of types, problem names, and source files used by listing and registration commands. |
+| [`extractProblem.py`](extractProblem.py) | Register, list, or extract models individually or from a text list. |
+| [`problems.json`](problems.json) | Central registry of types, problem names, source files, and required arguments. |
+| [`problems.txt`](problems.txt) | Example names-only list for batch extraction. |
 | [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
 | [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
 | [`VI/LINLib/`](VI/LINLib/) | LINLib instances and scripts for reformulating continuous LPs as VIs/MCPs. |
@@ -68,6 +69,25 @@ cd ..
 ```
 
 The generated model is saved as `tempMCPs/bai_haung.gms`. The `tempMCPs/` folder is created automatically and ignored by Git. Extracted models with different names can coexist; extracting the same name again replaces that file after a successful compilation. Names are shared across types, so models with the same `--select` value use the same output path. An existing root-level `tempMCP.gms` is left untouched.
+
+To extract several registered models, put one name per line in a text file, such as the included [`problems.txt`](problems.txt):
+
+```text
+# problems.txt
+agg
+bai_haung
+dirkse2
+```
+
+```bash
+python3 extractProblem.py extractList --file problems.txt
+```
+
+The command looks up each name across all types in `problems.json`; no `--type` is needed. This example generates `tempMCPs/agg.gms`, `tempMCPs/bai_haung.gms`, and `tempMCPs/dirkse2.gms`. Model defaults are used without overrides, including the default dimensions of `bai_haung` and `dirkse2`. Extraction compiles the models without executing their solve statements.
+
+Blank lines and comments starting with `#` are ignored. Repeated names are extracted once. A model whose registry record lists `required_arguments` is skipped with a warning asking the user to generate it separately with the necessary arguments. These skips leave existing outputs untouched. Required arguments are declared in the registry by the model author, rather than inferred from GAMS source; see the registration instructions below.
+
+Unknown names, names registered under multiple types, missing source files, and compilation errors are reported, and the command continues with later names. Resolve ambiguous names with the single-model `extract --type ... --select ...` command. A final summary reports extracted, skipped, and failed entries. The exit status is nonzero if any entries failed; skipping declared required arguments or duplicates alone is successful. The input file path is relative to the caller's working directory; outputs always go into this repository's `tempMCPs/` folder.
 
 ## Extracting problem instances
 
@@ -361,7 +381,20 @@ Each problem record contains its name without the `.gms` extension, its register
 
 Each `(type, name)` pair must be unique, and `file` must match `<type>/<name>.gms`. A name can be registered separately under different types. Keep parameter defaults in the GAMS source. Removing an entry removes that problem from the listing without deleting its source file.
 
-For now, the registry controls the `list` command. Extraction continues to select an existing `.gms` file directly using `--type` and `--select`.
+For a model that requires arguments with no defaults, add an optional `required_arguments` array to its record in `problems.json` after registration. Use command-line argument names without the leading `--`, for example:
+
+```json
+{
+  "name": "myMCP",
+  "type": "MCP",
+  "file": "MCP/myMCP.gms",
+  "required_arguments": ["dimension"]
+}
+```
+
+`extractList` skips this model and warns users to extract it separately, for example with `extract --type MCP --select myMCP --dimension 20`. Omit the field or use an empty array for models that need no arguments or provide defaults for all parameters. Update this metadata if the model's input requirements change. `addProblem` preserves existing records and creates new records without required arguments; add this field when importing a model that needs user-supplied values.
+
+The registry controls `list` and `extractList`. Single-model extraction continues to select an existing `.gms` file directly using `--type` and `--select`.
 
 ### MCP models
 

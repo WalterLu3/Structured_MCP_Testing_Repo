@@ -1,4 +1,4 @@
-"""Register types and models, list models, or extract as tempMCPs/<name>.gms.
+"""Register, list, or extract models individually or from a names-only list.
 
 The problem catalog is stored in problems.json beside this script.
 Each type has a folder beside this script. Extraction calls GAMS
@@ -46,6 +46,13 @@ def parse_arguments(argv=None):
 
     extract_parser = subparsers.add_parser(
         "extract", help="Extract a problem instance."
+    )
+    batch_parser = subparsers.add_parser(
+        "extractList", help="Extract registered problems named in a text file."
+    )
+    batch_parser.add_argument(
+        "--file", required=True, type=Path,
+        help="Text file containing one registered problem name per line.",
     )
     list_parser = subparsers.add_parser(
         "list", help="List registered problem instances available locally."
@@ -212,6 +219,15 @@ def load_registry(base_dir):
         expected = f"{category}/{name}.gms"
         if record["file"] != expected:
             raise ValueError(f"Problem record {index}: file must be {expected}")
+        required = record.get("required_arguments", [])
+        if (not isinstance(required, list) or any(
+                not isinstance(argument, str)
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", argument)
+                for argument in required)):
+            raise ValueError(
+                f"Problem record {index}: required_arguments must be an array "
+                "of argument names without leading '--'"
+            )
         key = (category, name)
         if key in seen:
             raise ValueError(f"Duplicate problem registration: {category}/{name}")
@@ -431,9 +447,80 @@ def extract_problem(args, base_dir):
     return output
 
 
+def extract_list(source_file, base_dir):
+    """Resolve names across registered types and continue after individual errors."""
+    records = load_problem_records(base_dir)
+    # Resolve the input relative to the caller, while outputs stay in the repo.
+    lines = source_file.expanduser().read_text(encoding="utf-8-sig").splitlines()
+    by_name = {}
+    for record in records:
+        by_name.setdefault(record["name"], []).append(record)
+
+    extracted = skipped = failed = 0
+    seen = set()
+    for number, line in enumerate(lines, 1):
+        name = line.split("#", 1)[0].strip()
+        if not name:
+            continue
+        context = f"{source_file}:{number}: {name}"
+        if name in seen:
+            print(f"Warning: {context}: duplicate name; skipping.", file=sys.stderr)
+            skipped += 1
+            continue
+        seen.add(name)
+        matches = by_name.get(name, [])
+        if len(matches) != 1:
+            reason = ("not registered" if not matches else
+                      "registered under multiple types: "
+                      + ", ".join(record["type"] for record in matches))
+            print(f"Warning: {context}: {reason}; skipping.", file=sys.stderr)
+            failed += 1
+            continue
+        record = matches[0]
+        required = record.get("required_arguments", [])
+        if required:
+            flags = ", ".join(f"--{argument}" for argument in required)
+            print(
+                f"Warning: {context}: requires arguments ({flags}); skipping. "
+                "Generate this problem separately using "
+                f"'extract --type {record['type']} --select {name}' "
+                "with the required arguments.", file=sys.stderr,
+            )
+            skipped += 1
+            continue
+        # Reuse the single-model path, forwarding no batch routing options or
+        # parameter overrides. Defaults declared in the GAMS source still apply.
+        args = parse_arguments([
+            "extract", "--type", record["type"], f"--select={name}",
+        ])
+        try:
+            output = extract_problem(args, base_dir)
+        except subprocess.CalledProcessError as error:
+            print(
+                f"Extraction failed: {context}: GAMS exited with status "
+                f"{error.returncode}.", file=sys.stderr,
+            )
+            failed += 1
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"Extraction failed: {context}: {error}", file=sys.stderr)
+            failed += 1
+        else:
+            print(f"Saved extracted model to {output}")
+            extracted += 1
+    print(f"Batch complete: {extracted} extracted, {skipped} skipped, {failed} failed.")
+    return 1 if failed else 0
+
+
 def main(argv=None):
     """Dispatch the command and return its exit status to the command line."""
     args = parse_arguments(argv)
+
+    if args.command == "extractList":
+        try:
+            return extract_list(args.file, BASE_DIR)
+        except (OSError, UnicodeError, ValueError) as error:
+            print(f"Cannot extract problem list: {error}", file=sys.stderr)
+            return 1
 
     if args.command == "addProblem":
         try:
