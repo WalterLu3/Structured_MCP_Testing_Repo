@@ -25,7 +25,7 @@ The `solver` entry in the current checkout is an empty placeholder file. Experim
 | Path | Purpose |
 | --- | --- |
 | [`extractProblem.py`](extractProblem.py) | List available models or extract an MCP/VI instance. |
-| [`problems.json`](problems.json) | Central registry of types, problem names, and source files used by `list` and `addType`. |
+| [`problems.json`](problems.json) | Central registry of types, problem names, and source files used by listing and registration commands. |
 | [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
 | [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
 | [`VI/LINLib/`](VI/LINLib/) | LINLib instances and scripts for reformulating continuous LPs as VIs/MCPs. |
@@ -309,15 +309,39 @@ The command preserves all existing problem records; the empty array above only i
 python3 extractProblem.py list --type NCP
 ```
 
-After adding `NCP/myProblem.gms`, it can be extracted with the same command structure:
+Import and register a model under the new type, then extract it with the same command structure:
 
 ```bash
+python3 extractProblem.py addProblem --type NCP --file /path/to/myProblem.gms
 python3 extractProblem.py extract --type NCP --select myProblem
 ```
 
-### Registering problems for listing
+### Adding a problem
 
-Add an entry to the `problems` array in [`problems.json`](problems.json) when adding a model. Each entry contains its name without the `.gms` extension, a type registered in the `types` array, and its repository-relative source path. For example:
+Import a `.gms` source file and register it with:
+
+```bash
+python3 extractProblem.py addProblem --type MCP --file /path/to/file/newProblem.gms
+```
+
+The type must already be registered. The filename determines the problem name: this example copies the file to `MCP/newProblem.gms` and adds its record to the `problems` array in [`problems.json`](problems.json). The original source is kept. Relative source paths are resolved from the directory where the command is run; destination paths are relative to the repository containing the script.
+
+The problem is then available for listing and extraction:
+
+```bash
+python3 extractProblem.py list --type MCP
+python3 extractProblem.py extract --type MCP --select newProblem
+```
+
+A file already in the intended type folder can be registered in place:
+
+```bash
+python3 extractProblem.py addProblem --type MCP --file MCP/myMCP.gms
+```
+
+Duplicate registrations within a type, including case variants, are rejected. Existing destination files are not overwritten; to register an existing unregistered model, pass that file's own path. If copying or saving the registry fails, the new copy is removed and existing files are preserved. The command imports only the specified file, so use standalone models or make their include/data dependencies available separately. Registration copies and records the source without compiling or solving it.
+
+Each problem record contains its name without the `.gms` extension, its registered type, and its repository-relative source path. For example:
 
 ```json
 {
@@ -350,9 +374,10 @@ model myMCP /f.x/;
 solve myMCP using mcp;
 ```
 
-Save this example as `MCP/myMCP.gms`, then extract it from the repository root:
+Save this example as `MCP/myMCP.gms`, then register and extract it from the repository root:
 
 ```bash
+python3 extractProblem.py addProblem --type MCP --file MCP/myMCP.gms
 python3 extractProblem.py extract --type MCP --select myMCP --dimension 20
 ```
 
@@ -372,9 +397,10 @@ putclose polystructure;
 
 For indexed equations, write the names of the individual equation instances, as illustrated in [`VI/bert_oc.gms`](VI/bert_oc.gms). If EMP reformulates the model, the row names must correspond to the generated MCP. Add a dimension parameter only if the model supports varying its size.
 
-Extract a newly added `VI/myVI.gms` model with:
+Register and extract a newly added `VI/myVI.gms` model with:
 
 ```bash
+python3 extractProblem.py addProblem --type VI --file VI/myVI.gms
 python3 extractProblem.py extract --type VI --select myVI
 ```
 

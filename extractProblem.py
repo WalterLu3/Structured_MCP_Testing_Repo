@@ -1,4 +1,4 @@
-"""Register problem types, list models, or extract a model as tempMCP.gms.
+"""Register problem types and models, list models, or extract as tempMCP.gms.
 
 The problem catalog is stored in problems.json beside this script.
 Each type has a folder beside this script. Extraction calls GAMS
@@ -9,6 +9,7 @@ The expanded source keeps its solve statements for the user to run later.
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,7 +38,7 @@ def parse_type_name(value):
 def parse_arguments(argv=None):
     """Parse commands; None reads the process's CLI arguments."""
     parser = argparse.ArgumentParser(
-        description="Register problem types, list models, or extract standalone GAMS models."
+        description="Register problem types and files, list models, or extract standalone GAMS models."
     )
 
     # Listing needs only a category; extraction also requires a model name.
@@ -62,6 +63,18 @@ def parse_arguments(argv=None):
     add_type_parser.add_argument(
         "--type", required=True, type=parse_type_name,
         help="New type name; also the name of its repository folder.",
+    )
+
+    add_problem_parser = subparsers.add_parser(
+        "addProblem", help="Copy a GAMS problem into a type folder and register it."
+    )
+    add_problem_parser.add_argument(
+        "--type", required=True, type=parse_type_name,
+        help="Registered type to which the problem belongs.",
+    )
+    add_problem_parser.add_argument(
+        "--file", required=True, type=Path,
+        help="Path to the .gms source file; its filename determines the problem name.",
     )
 
     # Routing options identify the source file rather than GAMS model parameters.
@@ -233,6 +246,17 @@ def save_registry(base_dir, data):
             temporary.unlink()
 
 
+def type_folder(category, base_dir):
+    """Check the destination folder without changing existing paths or symlinks."""
+    for entry in base_dir.iterdir():
+        if entry.name.casefold() == category.casefold() and entry.name != category:
+            raise ValueError(f"A path already exists as '{entry.name}'; use its exact spelling")
+    folder = base_dir / category
+    if folder.is_symlink() or (folder.exists() and not folder.is_dir()):
+        raise ValueError(f"Type folder must be a real directory: {folder}")
+    return folder
+
+
 def add_type(category, base_dir):
     """Register a type and its folder, rolling back new files if saving fails."""
     validate_type_name(category)
@@ -241,12 +265,7 @@ def add_type(category, base_dir):
         if existing.casefold() == category.casefold():
             raise ValueError(f"Type '{category}' is already registered as '{existing}'")
 
-    for entry in base_dir.iterdir():
-        if entry.name.casefold() == category.casefold() and entry.name != category:
-            raise ValueError(f"A path already exists as '{entry.name}'; use its exact spelling")
-    folder = base_dir / category
-    if folder.is_symlink() or (folder.exists() and not folder.is_dir()):
-        raise ValueError(f"Type folder must be a real directory: {folder}")
+    folder = type_folder(category, base_dir)
     folder_created = False
     marker_created = False
     marker = folder / ".gitkeep"
@@ -272,6 +291,71 @@ def add_type(category, base_dir):
                 pass  # Another process may have added files; leave them intact.
         raise
     return folder
+
+
+def add_problem(category, source_file, base_dir):
+    """Import one GAMS file and register it, preserving the original source."""
+    validate_type_name(category)
+    data = load_registry(base_dir)
+    if category not in data["types"]:
+        available = ", ".join(data["types"]) or "none"
+        raise ValueError(
+            f"Unknown type '{category}'. Registered types: {available}. "
+            "Use addType to register a new type first."
+        )
+
+    # Resolve relative source paths from the caller's directory, not the repo.
+    supplied = Path(source_file).expanduser()
+    if supplied.suffix.lower() != ".gms":
+        raise ValueError(f"Source must be a .gms file: {supplied}")
+    name = supplied.stem
+    if not name or name in {".", ".."} or Path(name).name != name or "\\" in name:
+        raise ValueError("Source filename must be a problem name without directories")
+    source = supplied.resolve(strict=True)
+    if not source.is_file():
+        raise ValueError(f"Source must be a regular .gms file: {supplied}")
+    for record in data["problems"]:
+        if record["type"] == category and record["name"].casefold() == name.casefold():
+            raise ValueError(f"Problem '{category}/{name}' is already registered as '{record['name']}'")
+
+    folder = type_folder(category, base_dir)
+    target = folder / f"{name}.gms"
+    if folder.exists():
+        for entry in folder.iterdir():
+            if entry.name.casefold() == target.name.casefold() and entry.name != target.name:
+                raise ValueError(f"A model path already exists as '{entry.name}'; use its exact spelling")
+    # A file already in its correct folder can be registered in place. An
+    # unrelated destination must never be overwritten by an import.
+    in_place = target.is_file() and not target.is_symlink() and source.samefile(target)
+    if (target.exists() or target.is_symlink()) and not in_place:
+        raise ValueError(f"Destination already exists: {target}. Register that file directly or choose another filename.")
+
+    record = {"name": name, "type": category, "file": f"{category}/{name}.gms"}
+    folder_created = False
+    copy_created = False
+    try:
+        if not folder.exists():
+            folder.mkdir()
+            folder_created = True
+        if not in_place:
+            # Exclusive creation also protects against a destination appearing
+            # after validation. Stream large models rather than loading them whole.
+            with source.open("rb") as reader, target.open("xb") as writer:
+                copy_created = True
+                shutil.copyfileobj(reader, writer)
+        data["problems"].append(record)
+        save_registry(base_dir, data)
+    except BaseException:
+        # Existing in-place files and the user's original source are preserved.
+        if copy_created:
+            target.unlink()
+        if folder_created:
+            try:
+                folder.rmdir()
+            except OSError:
+                pass
+        raise
+    return record
 
 
 def extract_problem(args, base_dir):
@@ -342,6 +426,15 @@ def extract_problem(args, base_dir):
 def main(argv=None):
     """Dispatch the command and return its exit status to the command line."""
     args = parse_arguments(argv)
+
+    if args.command == "addProblem":
+        try:
+            record = add_problem(args.type, args.file, BASE_DIR)
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"Cannot add problem: {error}", file=sys.stderr)
+            return 1
+        print(f"Registered problem '{args.type}/{record['name']}'; file: {BASE_DIR / record['file']}")
+        return 0
 
     if args.command == "addType":
         try:

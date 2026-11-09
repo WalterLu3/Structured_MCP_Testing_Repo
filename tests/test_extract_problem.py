@@ -323,10 +323,12 @@ class TypeRegistrationTests(ExtractionFixture):
         self.assertEqual((self.root / "problems.json").read_bytes(), before)
 
     def test_cli_rejects_type_paths_for_all_commands(self):
-        for command in ("addType", "list", "extract"):
+        for command in ("addType", "addProblem", "list", "extract"):
             options = [command, "--type", "../outside"]
             if command == "extract":
                 options.extend(["--select", "example"])
+            elif command == "addProblem":
+                options.extend(["--file", "unused.gms"])
             with self.subTest(command=command), redirect_stderr(StringIO()), self.assertRaises(SystemExit):
                 extraction.parse_arguments(options)
 
@@ -378,6 +380,182 @@ class TypeRegistrationTests(ExtractionFixture):
                 (self.root / "problems.json").write_text(json.dumps({**data, "types": categories}))
                 with self.assertRaises(ValueError):
                     extraction.load_registry(self.root)
+
+
+class ProblemRegistrationTests(ExtractionFixture):
+    def source_file(self, filename="newProblem.gms"):
+        incoming = self.root / "incoming files"
+        incoming.mkdir(exist_ok=True)
+        source = incoming / filename
+        source.write_bytes(b"* GAMS model\r\nVariable x; Equation f;\r\nf.. x =N= 0;\r\nModel m /f.x/;\r\nSolve m using mcp;\r\n")
+        return source
+
+    def test_add_problem_copies_bytes_and_registers_without_running_gams(self):
+        source = self.source_file()
+        previous = extraction.load_problem_records(self.root)
+        output = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
+            extraction.subprocess, "run"
+        ) as run, redirect_stdout(output):
+            code = extraction.main(["addProblem", "--type", "MCP", "--file", str(source)])
+        self.assertEqual(code, 0)
+        self.assertIn("Registered problem 'MCP/newProblem'", output.getvalue())
+        self.assertEqual((self.root / "MCP" / "newProblem.gms").read_bytes(), source.read_bytes())
+        self.assertEqual(extraction.load_problem_records(self.root), previous + [
+            {"name": "newProblem", "type": "MCP", "file": "MCP/newProblem.gms"}
+        ])
+        run.assert_not_called()
+
+    def test_registers_a_file_already_in_its_type_folder(self):
+        source = self.root / "VI" / "newProblem.gms"
+        source.write_bytes(b"existing user model")
+        with patch.object(extraction.shutil, "copyfileobj") as copy:
+            record = extraction.add_problem("VI", source, self.root)
+        self.assertEqual(record, {"name": "newProblem", "type": "VI", "file": "VI/newProblem.gms"})
+        self.assertEqual(source.read_bytes(), b"existing user model")
+        copy.assert_not_called()
+
+    def test_new_problem_immediately_appears_in_list(self):
+        extraction.add_problem("VI", self.source_file(), self.root)
+        output = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(output):
+            code = extraction.main(["list", "--type", "VI"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue().splitlines(), ["example", "newProblem"])
+
+    def test_imported_problem_can_be_extracted_from_a_custom_type(self):
+        extraction.add_type("NCP", self.root)
+        extraction.add_problem("NCP", self.source_file(), self.root)
+        args = extraction.parse_arguments(["extract", "--type", "NCP", "--select", "newProblem"])
+        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
+            result = extraction.extract_problem(args, self.root)
+        self.assertEqual(result.read_text(), "* Expanded GAMS source\n")
+        self.assertEqual(run.call_args.args[0][1], str(self.root / "NCP" / "newProblem.gms"))
+
+    def test_duplicate_registration_and_case_variant_preserve_data(self):
+        source = self.source_file()
+        extraction.add_problem("MCP", source, self.root)
+        previous = (self.root / "problems.json").read_bytes()
+        content = (self.root / "MCP" / "newProblem.gms").read_bytes()
+        for candidate in (source, self.source_file("NEWPROBLEM.gms")):
+            with self.subTest(candidate=candidate), self.assertRaisesRegex(ValueError, "already registered"):
+                extraction.add_problem("MCP", candidate, self.root)
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+        self.assertEqual((self.root / "MCP" / "newProblem.gms").read_bytes(), content)
+
+    def test_existing_unregistered_destination_is_not_overwritten(self):
+        source = self.source_file()
+        destination = self.root / "MCP" / source.name
+        destination.write_bytes(b"original user file")
+        previous = (self.root / "problems.json").read_bytes()
+        with self.assertRaisesRegex(ValueError, "Destination already exists"):
+            extraction.add_problem("MCP", source, self.root)
+        self.assertEqual(destination.read_bytes(), b"original user file")
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+
+    def test_unknown_type_does_not_create_a_folder_or_change_registry(self):
+        source = self.source_file()
+        previous = (self.root / "problems.json").read_bytes()
+        with self.assertRaisesRegex(ValueError, "Use addType"):
+            extraction.add_problem("NCP", source, self.root)
+        self.assertFalse((self.root / "NCP").exists())
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+
+    def test_missing_file_wrong_extension_and_directories_are_rejected(self):
+        missing = self.root / "missing.gms"
+        wrong_extension = self.source_file("newProblem.txt")
+        directory = self.root / "directory.gms"
+        directory.mkdir()
+        previous = (self.root / "problems.json").read_bytes()
+        for source in (missing, wrong_extension, directory):
+            with self.subTest(source=source), self.assertRaises((OSError, ValueError)):
+                extraction.add_problem("MCP", source, self.root)
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+
+    def test_unresolvable_source_path_reports_a_readable_cli_error(self):
+        error = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
+            Path, "expanduser", side_effect=RuntimeError("Cannot resolve source home directory")
+        ), redirect_stderr(error):
+            code = extraction.main(["addProblem", "--type", "MCP", "--file", "~/newProblem.gms"])
+        self.assertEqual(code, 1)
+        self.assertIn("Cannot add problem: Cannot resolve source home directory", error.getvalue())
+
+    def test_uppercase_source_extension_has_a_canonical_destination(self):
+        source = self.source_file("newProblem.GMS")
+        record = extraction.add_problem("MCP", source, self.root)
+        self.assertEqual(record["file"], "MCP/newProblem.gms")
+        self.assertEqual((self.root / record["file"]).read_bytes(), source.read_bytes())
+
+    def test_same_name_can_be_added_to_different_types(self):
+        source = self.source_file()
+        first = extraction.add_problem("MCP", source, self.root)
+        second = extraction.add_problem("VI", source, self.root)
+        self.assertEqual(first["name"], second["name"])
+        self.assertNotEqual(first["file"], second["file"])
+        self.assertEqual((self.root / first["file"]).read_bytes(), (self.root / second["file"]).read_bytes())
+
+    def test_failed_registry_save_removes_only_the_new_copy(self):
+        source = self.source_file()
+        previous = (self.root / "problems.json").read_bytes()
+        content = source.read_bytes()
+        with patch.object(extraction, "save_registry", side_effect=OSError("write failed")), self.assertRaises(OSError):
+            extraction.add_problem("MCP", source, self.root)
+        self.assertFalse((self.root / "MCP" / source.name).exists())
+        self.assertEqual(source.read_bytes(), content)
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+        self.assertTrue((self.root / "MCP" / "example.gms").is_file())
+
+    def test_failed_registry_save_preserves_an_in_place_source(self):
+        source = self.root / "MCP" / "newProblem.gms"
+        source.write_bytes(b"existing user model")
+        previous = (self.root / "problems.json").read_bytes()
+        with patch.object(extraction, "save_registry", side_effect=OSError("write failed")), self.assertRaises(OSError):
+            extraction.add_problem("MCP", source, self.root)
+        self.assertEqual(source.read_bytes(), b"existing user model")
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+
+    def test_partial_copy_is_removed_when_reading_fails(self):
+        source = self.source_file()
+        previous = (self.root / "problems.json").read_bytes()
+
+        def fail(reader, writer):
+            writer.write(b"partial")
+            raise OSError("copy failed")
+
+        with patch.object(extraction.shutil, "copyfileobj", side_effect=fail), self.assertRaises(OSError):
+            extraction.add_problem("MCP", source, self.root)
+        self.assertFalse((self.root / "MCP" / source.name).exists())
+        self.assertTrue(source.is_file())
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+
+    def test_missing_registered_folder_is_created_and_rolled_back_on_failure(self):
+        source = self.source_file()
+        data = extraction.load_registry(self.root)
+        data["types"].append("NCP")
+        extraction.save_registry(self.root, data)
+        previous = (self.root / "problems.json").read_bytes()
+        with patch.object(extraction, "save_registry", side_effect=OSError("write failed")), self.assertRaises(OSError):
+            extraction.add_problem("NCP", source, self.root)
+        self.assertFalse((self.root / "NCP").exists())
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
+        extraction.add_problem("NCP", source, self.root)
+        self.assertTrue((self.root / "NCP" / source.name).is_file())
+
+    def test_destination_symlink_is_not_followed(self):
+        source = self.source_file()
+        target = self.root / "MCP" / source.name
+        try:
+            target.symlink_to(source)
+        except OSError:
+            self.skipTest("Symbolic links are not available")
+        previous = (self.root / "problems.json").read_bytes()
+        content = source.read_bytes()
+        with self.assertRaisesRegex(ValueError, "Destination already exists"):
+            extraction.add_problem("MCP", source, self.root)
+        self.assertTrue(target.is_symlink())
+        self.assertEqual(source.read_bytes(), content)
+        self.assertEqual((self.root / "problems.json").read_bytes(), previous)
 
 
 @unittest.skipUnless(RUN_GAMS_TESTS, "Enable GAMS integration checks with --gams-tests")
