@@ -1,5 +1,8 @@
 *.lst
 
+# Extracted models and files generated when running them.
+/tempMCPs/
+
 # Generated LINLib models above GitHub's recommended maximum of 50 MiB.
 /VI/nug30.gms
 /VI/osa-60.gms

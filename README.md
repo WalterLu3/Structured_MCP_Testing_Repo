@@ -62,10 +62,12 @@ python3 extractProblem.py extract \
     --select bai_haung \
     --dimension 10
 
-gams tempMCP.gms mcp=path
+cd tempMCPs
+gams bai_haung.gms mcp=path
+cd ..
 ```
 
-The generated model is saved as `tempMCP.gms` in the repository root. Each extraction uses this same output filename, so save a copy if you want to retain an instance before generating another one.
+The generated model is saved as `tempMCPs/bai_haung.gms`. The `tempMCPs/` folder is created automatically and ignored by Git. Extracted models with different names can coexist; extracting the same name again replaces that file after a successful compilation. Names are shared across types, so models with the same `--select` value use the same output path. An existing root-level `tempMCP.gms` is left untouched.
 
 ## Extracting problem instances
 
@@ -81,9 +83,9 @@ python3 extractProblem.py extract --type PROBLEM_TYPE --select MODEL_NAME [OPTIO
 | `--select` | Required. Selects the model name without the `.gms` extension. |
 | `--dimension` | Sets the dimension for models that use this parameter. Supply it when extracting a parameterized model; other models have fixed sizes. |
 
-The root script selects `<type>/<model>.gms` and calls GAMS directly. Model lookup, compilation, and the `tempMCP.gms` output use the script's directory, so the script can also be invoked by its absolute path from another directory.
+The root script selects `<type>/<model>.gms` and calls GAMS directly. Model lookup and compilation use the script's directory, and output is written to `<repository>/tempMCPs/<model>.gms`, regardless of the directory from which the script is invoked. The script prints the completed output path.
 
-Only explicitly supplied modeling parameters are forwarded to GAMS, using names such as `--dimension=200`. Omitted parameters retain the defaults defined by the model. Extraction replaces `tempMCP.gms` only after a successful compilation; a failed compilation preserves the previous output.
+Only explicitly supplied modeling parameters are forwarded to GAMS, using names such as `--dimension=200`. Omitted parameters retain the defaults defined by the model. Extraction replaces the selected output file only after a successful compilation; a failed compilation preserves existing outputs.
 
 For example, generate the thesis MCP example with dimension 200:
 
@@ -104,7 +106,9 @@ python3 extractProblem.py extract \
 
 This VI model has a fixed mesh in its source file, so the example does not pass `--dimension`.
 
-Extraction uses GAMS compilation (`action=c`, `dumpOpt=21`) to expand the selected source without executing its solve statements. Models already expressed as MCPs can then be solved from `tempMCP.gms`. Embedded GAMS code that writes `poly.txt` is retained in the extracted source. A source model that uses EMP still requires the corresponding EMP solver when executed.
+Extraction uses GAMS compilation (`action=c`, `dumpOpt=21`) to expand the selected source without executing its solve statements. Models already expressed as MCPs can then be solved from `tempMCPs/<model>.gms`. Embedded GAMS code that writes `poly.txt` is retained in the extracted source. A source model that uses EMP still requires the corresponding EMP solver when executed.
+
+GAMS writes relative output files, including `poly.txt`, in the run's working directory. Run models from `tempMCPs/` to keep these files beside the extracted source. Solver option files and any other runtime inputs must also be available in that working directory. Running `gams tempMCPs/<model>.gms` from the repository root instead uses the repository root as the working directory.
 
 The `list` command reads the central [`problems.json`](problems.json) registry and prints registered model names for the requested type in alphabetical order. Only models whose source files exist locally are printed; missing registered files produce warnings on standard error. Unregistered files and helper scripts are not listed. For example, the dataset loader `VI/vimod.gms` is not registered as a standalone problem.
 
@@ -144,7 +148,7 @@ The extractor requires the selected `.gms` file to exist; missing models produce
 
 The PATHVI experiments compare three crash configurations: PNewton, Lemke ray start, and PATHVI ray start. First extract a model with VI structure, such as `bert_oc`, as shown above.
 
-Create or edit `path.opt` in the working directory with one of the following configurations.
+Create or edit `tempMCPs/path.opt` with one of the following configurations.
 
 **PNewton**
 
@@ -170,18 +174,20 @@ pathvi_filename poly.txt
 Run the extracted model with the configured PATH solver and enable its option file:
 
 ```bash
-gams tempMCP.gms mcp=path optfile=1
+cd tempMCPs
+gams bert_oc.gms mcp=path optfile=1
+cd ..
 ```
 
 This command assumes the intended PATH build is registered as `path` in GAMS. If it is registered under another solver name, use that name and its corresponding option filename.
 
-The PATHVI configuration requires `poly.txt`, containing one polyhedral row name per line. For the standalone `bert_oc` example, the model writes this file when `tempMCP.gms` is executed, before the solve statement. Other models and reformulations must provide the matching row information in the working directory. The names must match the model being solved.
+The PATHVI configuration requires `poly.txt`, containing one polyhedral row name per line. For the standalone `bert_oc` example, the extracted `bert_oc.gms` writes this file before its solve statement. With the commands above, it is written to `tempMCPs/poly.txt`. Other models and reformulations must provide the matching row information in the working directory. The names must match the model being solved.
 
 Run each configuration separately and compare the solution status, timings, and iteration counts in the GAMS listing and solver output. Additional examples are available under [`VI/`](VI/).
 
 ## Linear algebra basis package experiments
 
-These experiments compare the solution times obtained with different basis factorization and update packages. Generate an MCP instance, then select one method in `path.opt`:
+These experiments compare the solution times obtained with different basis factorization and update packages. Generate an MCP instance such as `bai_haung`, then select one method in `tempMCPs/path.opt`:
 
 ```text
 factorization_method lusol
@@ -199,7 +205,9 @@ factorization_library_name /absolute/path/to/compiled/umfpack_basis_library
 Run the generated model with the option file enabled:
 
 ```bash
-gams tempMCP.gms mcp=path optfile=1
+cd tempMCPs
+gams bai_haung.gms mcp=path optfile=1
+cd ..
 ```
 
 Use the same instance, starting point, and other solver options when comparing packages. Preserve each run's listing or log before running the next configuration.

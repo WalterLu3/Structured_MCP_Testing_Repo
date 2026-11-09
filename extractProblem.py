@@ -1,4 +1,4 @@
-"""Register problem types and models, list models, or extract as tempMCP.gms.
+"""Register types and models, list models, or extract as tempMCPs/<name>.gms.
 
 The problem catalog is stored in problems.json beside this script.
 Each type has a folder beside this script. Extraction calls GAMS
@@ -359,7 +359,7 @@ def add_problem(category, source_file, base_dir):
 
 
 def extract_problem(args, base_dir):
-    """Expand a standalone GAMS model and return the path to tempMCP.gms."""
+    """Expand a GAMS model and return tempMCPs/<selected name>.gms."""
     validate_type_name(args.type)
     # A selection is a model name, not a path outside the chosen model folder.
     if (not args.select or args.select in {".", ".."}
@@ -409,7 +409,15 @@ def extract_problem(args, base_dir):
             # A zero exit status alone is insufficient if no usable dump exists.
             if not dump.is_file() or dump.stat().st_size == 0:
                 raise RuntimeError("GAMS completed without creating the preprocessed model")
-            output = base_dir / "tempMCP.gms"
+            # Publish each model under its own name, creating the generated
+            # output folder only after compilation has produced a usable dump.
+            output_dir = base_dir / "tempMCPs"
+            if output_dir.is_symlink():
+                raise RuntimeError(f"Extraction output directory must not be a symlink: {output_dir}")
+            output_dir.mkdir(exist_ok=True)
+            output = output_dir / f"{args.select}.gms"
+            if output.exists() and output.samefile(model):
+                raise RuntimeError(f"Extraction output would overwrite the source model: {output}")
             # Replace the output only after success. Both paths are on the same
             # filesystem, so readers see the complete old or new model.
             dump.replace(output)
