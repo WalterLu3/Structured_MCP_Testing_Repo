@@ -71,6 +71,30 @@ $load ac ab ai asc asi as1 as2
 $load xc xb xi xsc xsi xs1 xs2 r
 * Newer GDX instance format
 $if gdxSymExist e $loadM e v ei qobj q ik
+
+* Batch export reports why an instance cannot be treated as a continuous LP.
+* Exit before reformulation so unsupported instances cannot produce stale output.
+$eval haveQOBJ card(qobj)<>0
+$eval haveQEQU card(q)<>0
+$eval isLP     card(j) eq card(jc)
+$ifthen.batch set batchStatus
+$ifthenE.kind %isLP%=0
+$echo SKIP_DISCRETE > "%batchStatus%"
+$exit
+$elseifE.kind %haveQOBJ%<>0
+$echo SKIP_QUADRATIC_OBJECTIVE > "%batchStatus%"
+$exit
+$elseifE.kind %haveQEQU%<>0
+$echo SKIP_QUADRATIC_CONSTRAINTS > "%batchStatus%"
+$exit
+$elseifE.kind card(ik)>0
+$echo SKIP_CONES > "%batchStatus%"
+$exit
+$else.kind
+$echo LP > "%batchStatus%"
+$endif.kind
+$endif.batch
+
 $ifE card(ik)>0 $abort 'Cone constraints =C= not supported'
 
 $gdxin
@@ -89,6 +113,12 @@ $offText
 $eval haveQOBJ card(qobj)<>0
 $eval haveQEQU card(q)<>0
 $eval isLP     card(j) eq card(jc)
+
+* Fallback scalar export preserves even infeasible rows rejected by JAMS.
+$ifthen.direct set directExport
+$include "%directExport%"
+$exit
+$endif.direct
 
 $set qpart "%gams.scrdir%qpart.%gams.scrext%"
 $onechoV > "%qpart%"
@@ -259,6 +289,6 @@ $if %haveQOBJ%%haveQEQU%==00 $set MTYPE MIP
 $ifE card(j)=card(jc) $set MTYPE r%MTYPE%
 
 * solve problem using EMP
-if (%isLP%<>0 and %haveQEQU%=0,
+if (%isLP%<>0 and %haveQOBJ%=0 and %haveQEQU%=0,
  solve m using emp;
 );
