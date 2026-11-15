@@ -4,7 +4,7 @@
     \includegraphics[width=.9\textwidth]{images/testing_repo_structure.pdf}
     \caption{Repository that stores the testing files in this thesis}
     \label{figure:testing_repository_structure}
-\end{figure}
+\end{figure} 
 
 \begin{comment}
 In this thesis, we improve the solution processes of the structured equilibrium problem in different scales: lower-level solver improvements in Chapter \ref{chapter:basisPackage} and Chapter \ref{chapter:pathvi}, mid-level theoretical justification and algorithm design in Chapter \ref{chapter:stochastic_optimization} and Chapter \ref{chapter:reshop}, and the high-level API design for ReSHOP, a new mathematical solver for tackling structured mathematical programs, in Chapter \ref{chapter:reshop_DSL}.
@@ -27,17 +27,17 @@ The testing repository provides a unified framework that allows users to extract
     \item VIs: this category contains MCPs with VI structure.
 \end{enumerate}
 
-The thesis introduces several classes of models, each with its own set of parameters that determine the size and structure of the resulting problem. For example, in the experiments on linear algebra improvements in Chapter~\ref{chapter:basisPackage}, the test models include a dimension parameter; increasing this parameter increases the size of the model.
+The thesis introduces several classes of models, each with its own set of parameters that determine the size and structure of the resulting problem. For example, in the experiments on linear algebra improvements in Chapter~\ref{chapter:basisPackage}, the test models include a dimension parameter; increasing this parameter increases the size of the model. 
 
 \subsection{Problem Extraction}
 
 \subsubsection{The Generation Script: \texttt{extractProblem.py}}
 
-The script \texttt{extractProblem.py} provides a unified interface for copying model source files from the repository into a working directory. It supports standard MCPs and models with variational inequality (VI) structure.
+The script \texttt{extractProblem.py} provides a unified interface for extracting model source files for mixed complementarity problems (MCPs). It supports standard MCPs and variational inequalities (VIs).
 
-The script saves the requested source in \texttt{tempMCPs/NAME.gms}, where \texttt{NAME} is the problem name supplied through \texttt{--select}. For problems with a configurable dimension, the GAMS source defines a default value. Users can override this value when running the copied file with GAMS.
+For problems with a configurable dimension, users can specify the dimension parameter when running GAMS to control the size of the instance. During extraction, the script saves the requested model in \texttt{tempMCPs/NAME.gms}, where \texttt{NAME} is the problem name supplied through \texttt{--select}.
 
-Each model is stored as a \texttt{.gms} file in its problem-type directory. Extraction copies the selected source unchanged, preserving its parameter defaults, compile-time variable references, solve statements, and any GAMS code that writes \texttt{poly.txt}. The Python script neither compiles nor executes the model and requires no GAMS installation. Compilation and execution occur when users subsequently run the copied file with GAMS. Only the selected source file is copied; any include files or external data must be made available separately.
+Each model is stored as a \texttt{.gms} file in its problem-type directory. The script copies the selected file unchanged; it does not call GAMS or extraction scripts in the subdirectories. Extraction neither compiles the model nor executes its solve statements. The copied file retains its parameter defaults, compile-time variable references, solve statements, and any GAMS code that writes \texttt{poly.txt}, so users can run the model separately after extraction. Only the selected source file is copied; any include files or external data must be made available separately.
 
 The \texttt{tempMCPs/} directory is created automatically in the repository containing the script. Models with different names can coexist in this directory. Extracting the same name again replaces its output only after a successful copy; a failed copy preserves the previous output. Because the output name does not include the problem type, models with the same name under different types share the same output path.
 
@@ -121,7 +121,7 @@ python extractProblem.py extract \
        --type MCP --select bai_haung
 \end{minted}
 
-This command copies the MCP source to \texttt{tempMCPs/bai\_haung.gms}. The copied file retains the default dimension of 200 defined in the source. A different dimension can be supplied when running GAMS, as shown below.
+This command copies the MCP source to \texttt{tempMCPs/bai\_haung.gms}, retaining the default dimension of 200 defined in the source.
 
 
 \subsubsection{Generating a VI Instance}
@@ -133,7 +133,7 @@ python extractProblem.py extract \
        --type VI --select agg
 \end{minted}
 
-The selected model already contains the MCP formulation of the VI associated with the LP instance \texttt{agg}. Its source is copied unchanged to \texttt{tempMCPs/agg.gms}. The standalone LINLib models in the \texttt{VI} directory also contain GAMS code that writes the corresponding \texttt{poly.txt} before the final solve. This code is retained during extraction and executes when the copied model is run.
+The selected model already contains the MCP formulation of the VI associated with the LP instance \texttt{agg}. The source file is copied unchanged to \texttt{tempMCPs/agg.gms}. The standalone LINLib models in the \texttt{VI} directory also contain GAMS code that writes the corresponding \texttt{poly.txt} before the final solve. This code is retained during extraction and executes when the generated model is run.
 
 \subsubsection{Extracting Multiple Problems}
 
@@ -152,9 +152,9 @@ To extract these problems, run:
 python extractProblem.py extractList --file problems.txt
 \end{minted}
 
-The script looks up each name across all problem types registered in \texttt{problems.json}, so users do not need to supply \texttt{--type}. This example copies the sources to \texttt{tempMCPs/agg.gms}, \texttt{tempMCPs/bai\_haung.gms}, and \texttt{tempMCPs/dirkse2.gms}. No parameter values are supplied through the text file. The defaults and parameter references defined in each source are preserved for subsequent GAMS runs.
+The script looks up each name across all problem types registered in \texttt{problems.json}, so users do not need to supply \texttt{--type}. This example copies the sources to \texttt{tempMCPs/agg.gms}, \texttt{tempMCPs/bai\_haung.gms}, and \texttt{tempMCPs/dirkse2.gms}. No parameter values are supplied through the text file. Instead, the defaults defined in each model are preserved for use when running GAMS; both \texttt{bai\_haung} and \texttt{dirkse2} define default dimensions.
 
-Every configurable example should define defaults in its GAMS source so it can be run independently. Batch extraction copies models without interpreting their parameters.
+Each configurable example should define defaults in its GAMS source so it can be run independently. Users can override these defaults when running GAMS; batch extraction copies the sources without interpreting their parameters.
 
 Blank lines and comments starting with \texttt{\#} are ignored, and repeated names are extracted only once. If a name is unknown or registered under multiple types, the script reports the problem and continues with the remaining names. Missing source files and copying failures are also reported without stopping subsequent extractions. A final summary reports the numbers of extracted, skipped, and failed entries. Problems with ambiguous names can be extracted individually by specifying their type.
 
@@ -168,7 +168,7 @@ gams bai_haung.gms mcp=path
 cd ..
 \end{minted}
 
-This run uses the model's default dimension. To override it for a particular run, supply the parameter directly to GAMS:
+The model uses its default dimension of 200. To run it with a different dimension, supply the override directly to GAMS:
 
 \begin{minted}[frame=lines, linenos]{text}
 cd tempMCPs
@@ -176,7 +176,7 @@ gams bai_haung.gms mcp=path --dimension=543
 cd ..
 \end{minted}
 
-The override changes the value used for this run without changing the default stored in the copied source. The Python script does not accept model parameter overrides.
+This override changes the dimension for that run without modifying the copied source file. Omitting it uses the default defined in the source.
 
 GAMS writes relative output files in its working directory. Running the model from \texttt{tempMCPs/} therefore places files such as \texttt{poly.txt} beside the generated model. Solver option files and any other runtime inputs must also be available in that working directory.
 
@@ -197,7 +197,7 @@ This command generates a five-stage stochastic optimization problem in which eac
 
 The \texttt{--select} argument is not required for stochastic optimization problems because the script uses a predefined stochastic optimization model whose size and data are controlled by the supplied parameters.
 
-In this case, two MCP models are generated in \textbf{tempFolder}:
+In this case, two MCP models are generated in \textbf{tempFolder}: 
 \begin{enumerate}
     \item \texttt{StochasticOptimization\_RU\_Formulation.gms}
     \item \texttt{StochasticOptimization\_Equilibrium\_Formulation.gms}
@@ -239,10 +239,10 @@ For problems involving randomly generated data, the \texttt{--randomSeed} argume
 For example,
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py
-       --type StochasticOptimization
-       --nstage 4
-       --nchildren 2
+python extractProblem.py 
+       --type StochasticOptimization 
+       --nstage 4 
+       --nchildren 2 
        --randomSeed 20
 \end{minted}
 should generate the same stochastic optimization instance each time it is executed, provided that the implementation and software environment remain unchanged.
@@ -272,14 +272,14 @@ python extractProblem.py addProblem \
        --type MCP --file /path/to/file/newProblem.gms
 \end{minted}
 
-The script copies the file to \texttt{MCP/newProblem.gms} and adds its record to \texttt{problems.json}. The source filename determines the registered problem name, and the original source file is preserved. If the file is already in the intended type directory, users can register it in place:
+The script copies the file to \texttt{MCP/newProblem.gms} and adds its record to the file \texttt{problems.json}. The source filename determines the registered problem name, and the original source file is preserved. If the file is already in the intended type directory, users can register it in place:
 
 \begin{minted}[frame=lines, linenos]{text}
 python extractProblem.py addProblem \
        --type MCP --file MCP/newProblem.gms
 \end{minted}
 
-Registration does not compile or solve the model. It imports only the specified source file; any include files or other dependencies must be made available separately. Duplicate registrations within a type and attempts to overwrite an existing destination file are rejected. After registration, the problem can be listed or extracted using:
+Registration does not compile or solve the model. It imports only the specified source file. Duplicate registrations within a type and attempts to overwrite an existing destination file are rejected. After registration, the problem can be listed or extracted using:
 
 \begin{minted}[frame=lines, linenos]{text}
 python extractProblem.py list --type MCP
@@ -298,7 +298,7 @@ Each problem record contains its name without the \texttt{.gms} extension, its r
 
 Each combination of type and problem name must be unique, and the source path must follow the form \texttt{TYPE/NAME.gms}. A name can be registered under different types, but such a name must be extracted individually because it is ambiguous in a names-only batch list.
 
-All configurable inputs should have defaults defined in the GAMS source before registration. Parameter values are handled by GAMS, so the registry records only the model's name, type, and source path.
+Each model should define default values for its configurable parameters in its GAMS source so it can be run independently. Users can override these defaults when running GAMS; the registry does not need to record model parameters.
 
 Removing a problem record from \texttt{problems.json} removes that problem from listing and batch lookup without deleting its source file. The following examples describe how to prepare MCP and VI source files for registration.
 
@@ -316,7 +316,7 @@ positive variables x(t,tt);
 equations f(t,tt);
 
 f(t,tt)..
-   - x(t - 1,tt) + 4*x(t,tt) - 1*x(t+1,tt)
+   - x(t - 1,tt) + 4*x(t,tt) - 1*x(t+1,tt) 
    - 1*x(t,tt+1) - 1*x(t,tt-1)
    + mod(card(t)*(ord(t)-1) + ord(tt) + 1, 2)
    - mod(card(t)*(ord(t)-1) + ord(tt), 2)
@@ -329,7 +329,7 @@ x.l(t,tt) = 40;
 solve foo using mcp;
 \end{minted}
 
-The first dollar control statement defines a default dimension of 20 if no value has been supplied. This lets the model run independently. Extraction copies the source to \texttt{tempMCPs/newProblem.gms}, preserving both the default declaration and references to \texttt{\%dimension\%}.
+The value of \texttt{dimension} defaults to 20 and can be overridden through the \texttt{--dimension} command-line argument when calling GAMS. When \texttt{extractProblem.py} is run on this model, the script copies the source without substituting a value for \texttt{\%dimension\%} or solving the model. The copied model is saved as \texttt{tempMCPs/newProblem.gms}.
 
 Register the source file using \texttt{addProblem} as shown above. To extract the model individually, run:
 
@@ -338,7 +338,7 @@ python extractProblem.py extract \
        --type MCP --select newProblem
 \end{minted}
 
-To run the copied model with a dimension of 40, supply the override to GAMS:
+To override the default dimension when running the copied model, use:
 
 \begin{minted}[frame=lines, linenos]{text}
 cd tempMCPs
@@ -346,13 +346,13 @@ gams newProblem.gms mcp=path --dimension=40
 cd ..
 \end{minted}
 
-Omitting \texttt{--dimension} from the GAMS call uses the default dimension of 20. Other configurable inputs should follow the same default declaration pattern within their GAMS source files.
+With this default, \texttt{--dimension} can be omitted from the GAMS call to use a dimension of 20.
 
 \subsubsection{MCP with VI Structure}
 
 For an MCP with VI structure, users must include code that writes the names of the polyhedral rows to a file named \texttt{poly.txt}, as described in Section~\ref{section:PATHVIhowTo}.
 
-For example, to add a model named \texttt{exampleVI}, create a file named \texttt{exampleVI.gms} in the \texttt{VI} directory:
+For example, to add a model named \texttt{exampleVI}, we first create a file named \texttt{exampleVI.gms} in the \texttt{VI} directory:
 
 \begin{minted}[frame=lines, linenos]{text}
 * File: exampleVI.gms
@@ -389,6 +389,26 @@ python extractProblem.py extract --type VI --select exampleVI
 
 The \texttt{poly.txt} writer is retained in the generated source. The file is written when the generated model is executed, before its solve statement, rather than during extraction.
 
+\subsubsection{Contributing a Problem}
+
+Users can contribute new problems through a pull request on GitHub. Contributors without write access should fork the repository and clone their fork; those with write access can work in a clone of the original repository. Before adding a problem, create a branch:
+
+\begin{minted}[frame=lines, linenos]{text}
+git switch -c add-new-problem
+\end{minted}
+
+The contribution should include the \texttt{.gms} source with parameter defaults, its entry in \texttt{problems.json} (updated automatically by \texttt{addProblem}), and any required supporting inputs. The model's source or reference, parameters, and execution instructions should be documented. For VI models, include the code that writes the matching \texttt{poly.txt}. Generated copies in \texttt{tempMCPs/}, listings, and logs should be excluded; updating the example batch list \texttt{problems.txt} is optional.
+
+After registering and testing the model as described above, stage the source, registry, and any added documentation or supporting inputs, then commit and push the contribution. For example:
+
+\begin{minted}[frame=lines, linenos]{text}
+git add MCP/newProblem.gms problems.json
+git commit -m "Add newProblem MCP model"
+git push -u origin add-new-problem
+\end{minted}
+
+Contributors then open a pull request from this branch to the original repository's \texttt{main} branch, describing the model and reporting the test commands and results. A maintainer reviews the contribution and merges it. Further details on forks and pull requests are provided in the GitHub contribution guide\footnote{\url{https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project}}.
+
 The next section explains how to reproduce the experiments presented in this thesis.
 
 \section{Reproducing the Thesis Experiments}
@@ -400,10 +420,8 @@ This section provides detailed instructions for reproducing the experiments pres
 To extract a VI instance, run the following command from the repository's root directory. This example assumes that \texttt{exampleVI.gms} has been added as described above:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py \
-       extract \
-       --type VI \
-       --select exampleVI
+python extractProblem.py extract \
+       --type VI --select exampleVI
 \end{minted}
 
 The corresponding MCP model is saved as \texttt{tempMCPs/exampleVI.gms}. The PATHVI experiments use the following three option file configurations, which should be placed in \texttt{tempMCPs/}:
@@ -467,7 +485,7 @@ bash run.sh UMFPACK_Libarary_PATH
 The experiment results will be stored in \textbf{folderName/result} as a separate log file with the basis option used in the file name. The solution time can be inspected at the end of the log file, where PATH reports the total time. Note that we require that users give \texttt{UMFPACK\_Libarary\_PATH} as UMFPACK is not compiled with the GAMS distribution, and the users need to compile it on their own. The compilation process is mentioned in Section \ref{section:compileUMFPACK}. After compiling UMFPACK, put the absolute path to the basis library as the \texttt{UMFPACK\_Libarary\_PATH} mentioned above.
 
 \subsection{PATHVI Experiments}
-In this section, we provide more details for the experiments in Section \ref{section:experiment}.
+In this section, we provide more details for the experiments in Section \ref{section:experiment}. 
 
 
 
@@ -489,7 +507,7 @@ The PATHVI package experiments are stored under the \texttt{pathvi} folder. Each
 
 \begin{minted}[frame=lines, linenos]{text}
 cd folderName
-bash run.sh UMFPACK_Libarary_PATH
+bash run.sh UMFPACK_Libarary_PATH 
 \end{minted}
 
 For the LINLIB experiments, as there is a large collection of instances, we allow the users to run a specific instance by using the following
@@ -509,14 +527,14 @@ All of the experiment results are in the form of a log file and will be stored i
 
 This section provides detailed instructions for running the experiments presented in Section~\ref{section:experimentResults}.
 
-To test different basis packages on an MCP, first generate a problem instance using the following command:
+To test different basis packages on an MCP, first extract a model using the following command:
 
 \begin{minted}[frame=lines, linenos]{text}
 python extractProblem.py extract \
        --type MCP --select bai_haung
 \end{minted}
 
-The generated MCP model is saved as \texttt{tempMCPs/bai\_haung.gms}. To test a particular basis package, run the model from \texttt{tempMCPs/} using a PATH option file (ex. path.opt or path.op1) in the same directory that specifies the desired factorization method. For example:
+The copied MCP model is saved as \texttt{tempMCPs/bai\_haung.gms}, retaining its default dimension of 200. To test a particular basis package, run the model from \texttt{tempMCPs/} using a PATH option file (ex. path.opt or path.op1) in the same directory that specifies the desired factorization method. For example:
 
 \begin{minted}[frame=lines, linenos]{text}
 factorization_method lusol
