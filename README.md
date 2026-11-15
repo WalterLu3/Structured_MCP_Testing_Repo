@@ -446,6 +446,26 @@ python3 extractProblem.py addProblem --type VI --file VI/myVI.gms
 python3 extractProblem.py extract --type VI --select myVI
 ```
 
+## Contributing a problem
+
+Submit new problems through a pull request. If you do not have write access, fork the repository on GitHub and clone your fork; otherwise, work in a clone of the original repository. Create a branch before adding the problem:
+
+```bash
+git switch -c add-new-problem
+```
+
+Include the `.gms` source with parameter defaults, its entry in `problems.json` (updated automatically by `addProblem`), and any required supporting inputs. Document the model's source or reference, parameters, and how to run it. For VI models, include the code that writes the matching `poly.txt`. Generated copies in `tempMCPs/`, listings, and logs should be excluded; updating the example batch list `problems.txt` is optional.
+
+After registering and testing the model as described above, stage the source, registry, and any added documentation or supporting inputs, then commit and push the contribution. For example:
+
+```bash
+git add MCP/newProblem.gms problems.json
+git commit -m "Add newProblem MCP model"
+git push -u origin add-new-problem
+```
+
+On GitHub, open a pull request from this branch to the original repository's `main` branch. Describe the model and report the test commands and results. A maintainer reviews the contribution and merges it. See the [GitHub contribution guide](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) for the fork and pull request steps.
+
 ## Outputs and reproducibility
 
 GAMS normally writes a listing (`.lst`) alongside other generated files in the working directory. Inspect both the model status and solver status before comparing timings or iteration counts. Individual experiments may also display residuals, timing summaries, or generate additional data files.
