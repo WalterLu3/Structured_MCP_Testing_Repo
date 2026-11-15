@@ -3,6 +3,7 @@
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -42,39 +43,40 @@ class ExtractionFixture(unittest.TestCase):
     def arguments(self, category="MCP", *options):
         return extraction.parse_arguments(["extract", "--type", category, "--select", "example", *options])
 
-    @staticmethod
-    def successful_compile(command, **kwargs):
-        dump = Path(kwargs["cwd"]) / (Path(command[1]).stem + ".dmp")
-        dump.write_text("* Expanded GAMS source\n")
-
 
 class ExtractionTests(ExtractionFixture):
-    def test_compiles_each_category_directly_without_subfolder_scripts(self):
+    def test_copies_each_category_unchanged_without_running_gams(self):
+        content = (
+            "* Source with defaults and a polyhedral row writer\r\n"
+            "$if not set dimension $set dimension 2\r\n"
+            "set i /1*%dimension%/;\r\n"
+            "file poly /'poly.txt'/; putclose poly 'f';\r\n"
+            "solve m using mcp;\r\n"
+        ).encode("utf-8")
         for category in ("MCP", "VI"):
+            model = self.root / category / "example.gms"
+            model.write_bytes(content)
             with self.subTest(category=category), patch.object(
-                extraction.subprocess, "run", side_effect=self.successful_compile
+                subprocess, "run", side_effect=AssertionError("Extraction must not run GAMS")
             ) as run:
                 output = extraction.extract_problem(self.arguments(category), self.root)
-                command = run.call_args.args[0]
-                self.assertEqual(command[:4], ["gams", str(self.root / category / "example.gms"), "action=c", "dumpOpt=21"])
-                self.assertEqual(run.call_args.kwargs, {"cwd": self.root, "check": True})
+                run.assert_not_called()
                 self.assertEqual(output, self.root / "tempMCPs" / "example.gms")
-                self.assertEqual(output.read_text(), "* Expanded GAMS source\n")
-                self.assertFalse(list(self.root.glob(".extractProblem-*")))
+                self.assertEqual(output.read_bytes(), content)
+                self.assertEqual(model.read_bytes(), content)
+                self.assertFalse((output.parent / "poly.txt").exists())
 
-    def test_forwards_supplied_parameters_and_preserves_gams_flag_names(self):
-        args = self.arguments("VI", "--dimension", "7", "--quad", "0", "--lambda", "0.5", "--randomSeed", "3")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
-            extraction.extract_problem(args, self.root)
-        flags = {value for value in run.call_args.args[0] if value.startswith("--")}
-        self.assertEqual(flags, {"--dimension=7", "--quad=0.0", "--lambda=0.5", "--randomSeed=3"})
+    def test_rejects_all_former_gams_parameter_options(self):
+        for name, value in (
+            ("dimension", "7"), ("nchildren", "2"), ("nstage", "3"),
+            ("data", "tree2"), ("quad", "0"), ("lambda", "0.5"),
+            ("alpha", "0.95"), ("demandType", "1"), ("randomSeed", "3"),
+        ):
+            with self.subTest(option=name), redirect_stderr(StringIO()), self.assertRaises(SystemExit) as error:
+                self.arguments("MCP", f"--{name}={value}")
+            self.assertEqual(error.exception.code, 2)
 
-    def test_omits_unspecified_flags_so_model_defaults_apply(self):
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
-            extraction.extract_problem(self.arguments(), self.root)
-        self.assertFalse(any(value.startswith("--") for value in run.call_args.args[0]))
-
-    def test_failed_compile_preserves_output_and_does_not_use_stale_dump(self):
+    def test_partial_copy_preserves_existing_outputs_and_cleans_up(self):
         output = self.root / "tempMCPs" / "example.gms"
         output.parent.mkdir()
         output.write_text("previous model")
@@ -83,85 +85,73 @@ class ExtractionTests(ExtractionFixture):
         stale = self.root / "example.dmp"
         stale.write_text("old dump")
 
-        def fail(command, **kwargs):
-            self.successful_compile(command, **kwargs)
-            raise subprocess.CalledProcessError(2, command)
+        def fail(reader, writer):
+            writer.write(b"partial source")
+            raise OSError("copy failed")
 
-        with patch.object(extraction.subprocess, "run", side_effect=fail):
-            with self.assertRaises(subprocess.CalledProcessError):
+        with patch.object(extraction.shutil, "copyfileobj", side_effect=fail):
+            with self.assertRaisesRegex(OSError, "copy failed"):
                 extraction.extract_problem(self.arguments(), self.root)
         self.assertEqual(output.read_text(), "previous model")
         self.assertEqual(other.read_text(), "another extracted model")
         self.assertEqual(stale.read_text(), "old dump")
-        self.assertFalse(list(self.root.glob(".extractProblem-*")))
+        self.assertEqual(sorted(path.name for path in output.parent.iterdir()), ["example.gms", "other.gms"])
 
-    def test_successful_compile_preserves_a_preexisting_dump(self):
+    def test_copy_preserves_a_preexisting_dump(self):
         stale = self.root / "example.dmp"
         stale.write_text("old dump")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            output = extraction.extract_problem(self.arguments(), self.root)
-        self.assertEqual(output.read_text(), "* Expanded GAMS source\n")
+        output = extraction.extract_problem(self.arguments(), self.root)
+        self.assertEqual(output.read_bytes(), (self.root / "MCP" / "example.gms").read_bytes())
         self.assertEqual(stale.read_text(), "old dump")
 
-    def test_does_not_move_a_directory_that_has_the_dump_filename(self):
+    def test_copy_ignores_a_directory_with_the_dump_filename(self):
         directory = self.root / "example.dmp"
         directory.mkdir()
         (directory / "keep.txt").write_text("keep this directory")
-        with patch.object(extraction.subprocess, "run") as run:
-            with self.assertRaisesRegex(RuntimeError, "not a file"):
-                extraction.extract_problem(self.arguments(), self.root)
-        run.assert_not_called()
+        extraction.extract_problem(self.arguments(), self.root)
         self.assertEqual((directory / "keep.txt").read_text(), "keep this directory")
 
-    def test_success_without_a_dump_does_not_replace_existing_output(self):
+    def test_failed_replacement_preserves_existing_output_and_cleans_up(self):
         output = self.root / "tempMCPs" / "example.gms"
         output.parent.mkdir()
         output.write_text("previous model")
-        with patch.object(extraction.subprocess, "run"):
-            with self.assertRaisesRegex(RuntimeError, "without creating"):
+        with patch.object(Path, "replace", side_effect=OSError("replace failed")):
+            with self.assertRaisesRegex(OSError, "replace failed"):
                 extraction.extract_problem(self.arguments(), self.root)
         self.assertEqual(output.read_text(), "previous model")
+        self.assertEqual(list(output.parent.iterdir()), [output])
 
     def test_different_model_names_keep_separate_outputs(self):
         (self.root / "VI" / "other.gms").write_text("second model")
 
-        def compile_source(command, **kwargs):
-            model = Path(command[1])
-            (Path(kwargs["cwd"]) / f"{model.stem}.dmp").write_text(model.read_text())
-
-        with patch.object(extraction.subprocess, "run", side_effect=compile_source):
-            first = extraction.extract_problem(self.arguments(), self.root)
-            args = self.arguments("VI")
-            args.select = "other"
-            second = extraction.extract_problem(args, self.root)
+        first = extraction.extract_problem(self.arguments(), self.root)
+        args = self.arguments("VI")
+        args.select = "other"
+        second = extraction.extract_problem(args, self.root)
         self.assertEqual(first, self.root / "tempMCPs" / "example.gms")
         self.assertEqual(second, self.root / "tempMCPs" / "other.gms")
         self.assertEqual(first.read_text(), "* A standalone model\n")
         self.assertEqual(second.read_text(), "second model")
 
     def test_same_name_from_another_type_replaces_only_that_output(self):
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            first = extraction.extract_problem(self.arguments("MCP"), self.root)
+        first = extraction.extract_problem(self.arguments("MCP"), self.root)
         first.write_text("old extracted model")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            second = extraction.extract_problem(self.arguments("VI"), self.root)
+        second = extraction.extract_problem(self.arguments("VI"), self.root)
         self.assertEqual(first, second)
-        self.assertEqual(second.read_text(), "* Expanded GAMS source\n")
+        self.assertEqual(second.read_bytes(), (self.root / "VI" / "example.gms").read_bytes())
 
     def test_legacy_root_output_is_preserved(self):
         legacy = self.root / "tempMCP.gms"
         legacy.write_text("old root output")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            result = extraction.extract_problem(self.arguments(), self.root)
+        result = extraction.extract_problem(self.arguments(), self.root)
         self.assertEqual(result, self.root / "tempMCPs" / "example.gms")
         self.assertEqual(legacy.read_text(), "old root output")
 
     def test_output_folder_conflict_preserves_the_existing_file(self):
         conflict = self.root / "tempMCPs"
         conflict.write_text("existing user file")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            with self.assertRaises(OSError):
-                extraction.extract_problem(self.arguments(), self.root)
+        with self.assertRaises(OSError):
+            extraction.extract_problem(self.arguments(), self.root)
         self.assertEqual(conflict.read_text(), "existing user file")
         self.assertFalse((self.root / "example.dmp").exists())
 
@@ -173,9 +163,8 @@ class ExtractionTests(ExtractionFixture):
             self.skipTest("Symbolic links are not available")
         model = self.root / "MCP" / "example.gms"
         before = model.read_bytes()
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            with self.assertRaisesRegex(RuntimeError, "symlink"):
-                extraction.extract_problem(self.arguments(), self.root)
+        with self.assertRaisesRegex(RuntimeError, "symlink"):
+            extraction.extract_problem(self.arguments(), self.root)
         self.assertEqual(model.read_bytes(), before)
         self.assertTrue(output_dir.is_symlink())
 
@@ -183,9 +172,8 @@ class ExtractionTests(ExtractionFixture):
         model = self.root / "tempMCPs" / "example.gms"
         model.parent.mkdir()
         model.write_text("source model")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile):
-            with self.assertRaisesRegex(RuntimeError, "overwrite the source model"):
-                extraction.extract_problem(self.arguments("tempMCPs"), self.root)
+        with self.assertRaisesRegex(RuntimeError, "overwrite the source model"):
+            extraction.extract_problem(self.arguments("tempMCPs"), self.root)
         self.assertEqual(model.read_text(), "source model")
 
     def test_missing_model_does_not_fall_back_to_gdx_conversion(self):
@@ -193,7 +181,7 @@ class ExtractionTests(ExtractionFixture):
         dataset = self.root / "VI" / "LINLib" / "instances" / "example.gdx"
         dataset.parent.mkdir(parents=True)
         dataset.write_text("a dataset is not a standalone model")
-        with patch.object(extraction.subprocess, "run") as run:
+        with patch.object(subprocess, "run") as run:
             with self.assertRaisesRegex(FileNotFoundError, "list --type VI"):
                 extraction.extract_problem(self.arguments("VI"), self.root)
         run.assert_not_called()
@@ -202,7 +190,7 @@ class ExtractionTests(ExtractionFixture):
         for name in ("../example", "..", "sub/example", "sub\\example", ""):
             args = self.arguments()
             args.select = name
-            with self.subTest(name=name), patch.object(extraction.subprocess, "run") as run:
+            with self.subTest(name=name), patch.object(subprocess, "run") as run:
                 with self.assertRaises(ValueError):
                     extraction.extract_problem(args, self.root)
                 run.assert_not_called()
@@ -218,7 +206,7 @@ class ExtractionTests(ExtractionFixture):
         ])
         output = StringIO()
         with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run"
+            subprocess, "run"
         ) as run, redirect_stdout(output):
             result = extraction.main(["list", "--type", "VI"])
         self.assertEqual(result, 0)
@@ -237,7 +225,7 @@ class ExtractionTests(ExtractionFixture):
         (self.root / "VI" / "example.gms").unlink()
         output, error = StringIO(), StringIO()
         with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run"
+            subprocess, "run"
         ) as run, redirect_stdout(output), redirect_stderr(error):
             code = extraction.main(["list", "--type", "VI"])
         self.assertEqual(code, 0)
@@ -297,31 +285,30 @@ class ExtractionTests(ExtractionFixture):
 
     def test_extraction_still_works_without_the_listing_registry(self):
         (self.root / "problems.json").unlink()
-        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run", side_effect=self.successful_compile
-        ), redirect_stdout(StringIO()):
+        with patch.object(extraction, "BASE_DIR", self.root), redirect_stdout(StringIO()):
             code = extraction.main(["extract", "--type", "MCP", "--select", "example"])
         self.assertEqual(code, 0)
         self.assertTrue((self.root / "tempMCPs" / "example.gms").is_file())
 
-    def test_cli_reports_compiler_failure_without_a_python_traceback(self):
+    def test_cli_reports_copy_failure_without_a_python_traceback(self):
         error = StringIO()
         with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run", side_effect=subprocess.CalledProcessError(7, ["gams"])
-        ), redirect_stdout(StringIO()), redirect_stderr(error):
-            code = extraction.main(["extract", "--type", "MCP", "--select", "example"])
-        self.assertEqual(code, 7)
-        self.assertIn("GAMS exited with status 7", error.getvalue())
-        self.assertFalse((self.root / "tempMCPs").exists())
-
-    def test_cli_reports_missing_gams(self):
-        error = StringIO()
-        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run", side_effect=FileNotFoundError("gams")
+            extraction.shutil, "copyfileobj", side_effect=OSError("copy failed")
         ), redirect_stdout(StringIO()), redirect_stderr(error):
             code = extraction.main(["extract", "--type", "MCP", "--select", "example"])
         self.assertEqual(code, 1)
-        self.assertIn("not found on PATH", error.getvalue())
+        self.assertIn("Extraction failed: copy failed", error.getvalue())
+        self.assertFalse((self.root / "tempMCPs" / "example.gms").exists())
+
+    def test_extraction_succeeds_without_gams_installed(self):
+        error = StringIO()
+        with patch.object(extraction, "BASE_DIR", self.root), patch.object(
+            subprocess, "run", side_effect=FileNotFoundError("gams")
+        ) as run, redirect_stdout(StringIO()), redirect_stderr(error):
+            code = extraction.main(["extract", "--type", "MCP", "--select", "example"])
+        self.assertEqual(code, 0)
+        self.assertEqual(error.getvalue(), "")
+        run.assert_not_called()
 
 
 class TypeRegistrationTests(ExtractionFixture):
@@ -329,7 +316,7 @@ class TypeRegistrationTests(ExtractionFixture):
         before = extraction.load_problem_records(self.root)
         output = StringIO()
         with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run"
+            subprocess, "run"
         ) as run, redirect_stdout(output):
             code = extraction.main(["addType", "--type", "NCP"])
         self.assertEqual(code, 0)
@@ -360,10 +347,8 @@ class TypeRegistrationTests(ExtractionFixture):
             code = extraction.main(["list", "--type", "NCP"])
         self.assertEqual(code, 0)
         self.assertEqual(output.getvalue().splitlines(), ["example"])
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
-            output_path = extraction.extract_problem(self.arguments("NCP"), self.root)
-        self.assertEqual(output_path.read_text(), "* Expanded GAMS source\n")
-        self.assertEqual(run.call_args.args[0][1], str(self.root / "NCP" / "example.gms"))
+        output_path = extraction.extract_problem(self.arguments("NCP"), self.root)
+        self.assertEqual(output_path.read_text(), "* A custom problem\n")
 
     def test_existing_folder_and_contents_are_preserved(self):
         folder = self.root / "NCP"
@@ -467,7 +452,7 @@ class ProblemRegistrationTests(ExtractionFixture):
         previous = extraction.load_problem_records(self.root)
         output = StringIO()
         with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-            extraction.subprocess, "run"
+            subprocess, "run"
         ) as run, redirect_stdout(output):
             code = extraction.main(["addProblem", "--type", "MCP", "--file", str(source)])
         self.assertEqual(code, 0)
@@ -499,10 +484,8 @@ class ProblemRegistrationTests(ExtractionFixture):
         extraction.add_type("NCP", self.root)
         extraction.add_problem("NCP", self.source_file(), self.root)
         args = extraction.parse_arguments(["extract", "--type", "NCP", "--select", "newProblem"])
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
-            result = extraction.extract_problem(args, self.root)
-        self.assertEqual(result.read_text(), "* Expanded GAMS source\n")
-        self.assertEqual(run.call_args.args[0][1], str(self.root / "NCP" / "newProblem.gms"))
+        result = extraction.extract_problem(args, self.root)
+        self.assertEqual(result.read_bytes(), (self.root / "NCP" / "newProblem.gms").read_bytes())
 
     def test_duplicate_registration_and_case_variant_preserve_data(self):
         source = self.source_file()
@@ -646,18 +629,19 @@ class BatchExtractionTests(ExtractionFixture):
         ]
         self.write_records(records)
         (self.root / "VI" / "other.gms").write_text("* Another model\n")
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
+        with patch.object(subprocess, "run") as run:
             code, output, error = self.batch("\ufeff# problems.txt\n\n example \nother # a VI\nexample\n")
         self.assertEqual(code, 0)
-        self.assertEqual(run.call_count, 2)
-        self.assertTrue((self.root / "tempMCPs" / "example.gms").is_file())
-        self.assertTrue((self.root / "tempMCPs" / "other.gms").is_file())
+        run.assert_not_called()
+        for record in records:
+            self.assertEqual(
+                (self.root / "tempMCPs" / f"{record['name']}.gms").read_bytes(),
+                (self.root / record["file"]).read_bytes(),
+            )
         self.assertIn("2 extracted, 1 skipped, 0 failed", output)
         self.assertIn("problems.txt:5: example: duplicate", error)
-        for call in run.call_args_list:
-            self.assertFalse(any(value.startswith("--") for value in call.args[0]))
 
-    def test_required_arguments_skip_compiler_and_preserve_previous_output(self):
+    def test_legacy_parameter_metadata_does_not_skip_copying(self):
         self.write_records([{
             "name": "example", "type": "MCP", "file": "MCP/example.gms",
             "required_arguments": ["dimension", "randomSeed"],
@@ -665,38 +649,38 @@ class BatchExtractionTests(ExtractionFixture):
         previous = self.root / "tempMCPs" / "example.gms"
         previous.parent.mkdir()
         previous.write_text("previous extraction")
-        with patch.object(extraction.subprocess, "run") as run:
+        source = self.root / "MCP" / "example.gms"
+        source.write_text("$if not set dimension $set dimension 2\nset i /1*%dimension%/;\n")
+        with patch.object(subprocess, "run") as run:
             code, output, error = self.batch("example\n")
         run.assert_not_called()
         self.assertEqual(code, 0)
-        self.assertEqual(previous.read_text(), "previous extraction")
-        self.assertIn("0 extracted, 1 skipped, 0 failed", output)
-        self.assertIn("requires arguments (--dimension, --randomSeed)", error)
-        self.assertIn("Generate this problem separately", error)
-        self.assertIn("extract --type MCP --select example", error)
+        self.assertEqual(previous.read_bytes(), source.read_bytes())
+        self.assertIn("1 extracted, 0 skipped, 0 failed", output)
+        self.assertEqual(error, "")
 
-    def test_unknown_and_ambiguous_names_are_not_compiled(self):
-        with patch.object(extraction.subprocess, "run") as run:
+    def test_unknown_and_ambiguous_names_are_not_copied(self):
+        with patch.object(subprocess, "run") as run:
             code, output, error = self.batch("missing\nexample\n")
         run.assert_not_called()
         self.assertEqual(code, 1)
         self.assertIn("missing: not registered", error)
         self.assertIn("example: registered under multiple types: MCP, VI", error)
         self.assertIn("0 extracted, 0 skipped, 2 failed", output)
+        self.assertFalse((self.root / "tempMCPs").exists())
 
     def test_missing_model_does_not_stop_later_extractions(self):
         self.write_records([
             {"name": "missing", "type": "VI", "file": "VI/missing.gms"},
             {"name": "example", "type": "MCP", "file": "MCP/example.gms"},
         ])
-        with patch.object(extraction.subprocess, "run", side_effect=self.successful_compile) as run:
-            code, output, error = self.batch("missing\nexample\n")
-        self.assertEqual(run.call_count, 1)
+        code, output, error = self.batch("missing\nexample\n")
         self.assertEqual(code, 1)
         self.assertIn("Model not found", error)
         self.assertIn("1 extracted, 0 skipped, 1 failed", output)
+        self.assertTrue((self.root / "tempMCPs" / "example.gms").is_file())
 
-    def test_compilation_failure_preserves_old_output_and_continues(self):
+    def test_copy_failure_preserves_old_output_and_continues(self):
         self.write_records([
             {"name": "broken", "type": "VI", "file": "VI/broken.gms"},
             {"name": "example", "type": "MCP", "file": "MCP/example.gms"},
@@ -706,40 +690,30 @@ class BatchExtractionTests(ExtractionFixture):
         previous.parent.mkdir()
         previous.write_text("previous extraction")
 
-        def compile_model(command, **kwargs):
-            self.successful_compile(command, **kwargs)
-            if Path(command[1]).stem == "broken":
-                raise subprocess.CalledProcessError(2, command)
+        copy_source = shutil.copyfileobj
 
-        with patch.object(extraction.subprocess, "run", side_effect=compile_model):
+        def copy_model(reader, writer):
+            if Path(reader.name).stem == "broken":
+                writer.write(b"partial source")
+                raise OSError("copy failed")
+            copy_source(reader, writer)
+
+        with patch.object(extraction.shutil, "copyfileobj", side_effect=copy_model):
             code, output, error = self.batch("broken\nexample\n")
         self.assertEqual(code, 1)
         self.assertEqual(previous.read_text(), "previous extraction")
         self.assertTrue((self.root / "tempMCPs" / "example.gms").is_file())
-        self.assertIn("GAMS exited with status 2", error)
+        self.assertIn("copy failed", error)
         self.assertIn("1 extracted, 0 skipped, 1 failed", output)
 
     def test_empty_list_does_not_create_output_folder(self):
-        with patch.object(extraction.subprocess, "run") as run:
+        with patch.object(subprocess, "run") as run:
             code, output, error = self.batch("# Nothing selected\n\n")
         run.assert_not_called()
         self.assertEqual(code, 0)
         self.assertIn("0 extracted, 0 skipped, 0 failed", output)
         self.assertFalse((self.root / "tempMCPs").exists())
         self.assertEqual(error, "")
-
-    def test_invalid_required_argument_metadata_fails_before_compilation(self):
-        for invalid in ("dimension", [1], ["--dimension"], [""]):
-            with self.subTest(required=invalid):
-                self.write_records([{
-                    "name": "example", "type": "MCP", "file": "MCP/example.gms",
-                    "required_arguments": invalid,
-                }])
-                with patch.object(extraction.subprocess, "run") as run:
-                    code, output, error = self.batch("example\n")
-                run.assert_not_called()
-                self.assertEqual(code, 1)
-                self.assertIn("required_arguments must be an array", error)
 
     def test_missing_or_invalid_utf8_list_has_a_friendly_error(self):
         source = self.root / "missing.txt"
@@ -748,7 +722,7 @@ class BatchExtractionTests(ExtractionFixture):
                 source.write_bytes(content)
             error = StringIO()
             with patch.object(extraction, "BASE_DIR", self.root), patch.object(
-                extraction.subprocess, "run"
+                subprocess, "run"
             ) as run, redirect_stderr(error):
                 code = extraction.main(["extractList", "--file", str(source)])
             run.assert_not_called()
@@ -756,10 +730,9 @@ class BatchExtractionTests(ExtractionFixture):
             self.assertIn("Cannot extract problem list", error.getvalue())
 
 
-@unittest.skipUnless(RUN_GAMS_TESTS, "Enable GAMS integration checks with --gams-tests")
-class GamsExtractionTests(unittest.TestCase):
+class CliExtractionFixture(unittest.TestCase):
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory(prefix="extract-gams-")
+        self.directory = tempfile.TemporaryDirectory(prefix="extract-cli-")
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name).resolve() / "repo with spaces"
         self.caller = Path(self.directory.name).resolve() / "caller"
@@ -768,94 +741,122 @@ class GamsExtractionTests(unittest.TestCase):
         (self.root / "MCP").mkdir()
         (self.root / "VI").mkdir()
         shutil.copy2(ROOT / "extractProblem.py", self.root / "extractProblem.py")
+        # The extractor must work even when GAMS cannot be found on PATH.
+        self.environment = {**os.environ, "PATH": ""}
 
-    def extract(self, category, name, *options):
+    def extract(self, category, name):
         result = subprocess.run(
-            [sys.executable, str(self.root / "extractProblem.py"), "extract", "--type", category, "--select", name, *options],
-            cwd=self.caller, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            [sys.executable, str(self.root / "extractProblem.py"), "extract", "--type", category, "--select", name],
+            cwd=self.caller, env=self.environment, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
         self.assertEqual(result.returncode, 0, result.stdout[-3000:])
         self.assertFalse((self.caller / "tempMCPs").exists())
         output = self.root / "tempMCPs" / f"{name}.gms"
         self.assertIn(str(output), result.stdout)
         self.assertFalse((self.root / "tempMCP.gms").exists())
-        return output.read_text()
+        self.assertEqual(output.read_bytes(), (self.root / category / f"{name}.gms").read_bytes())
+        return output
 
-    def test_expands_parameters_and_defaults_without_executing_the_model(self):
+    def run_gams(self, model, *options):
+        result = subprocess.run(
+            ["gams", str(model), "lo=2", *options], cwd=model.parent,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        )
+        log = model.with_suffix(".log")
+        self.assertEqual(result.returncode, 0, result.stdout + (log.read_text()[-3000:] if log.exists() else ""))
+
+
+class CliExtractionTests(CliExtractionFixture):
+    def test_copies_source_without_preprocessing_or_execution(self):
         model = self.root / "MCP" / "toy.gms"
-        model.write_text("""$if not setglobal dimension $setglobal dimension 2
+        model.write_text("""$if not set dimension $set dimension 2
+set i /1*%dimension%/;
+file sentinel /'executed.txt'/;
+putclose sentinel 'The model was executed';
+""")
+        output = self.extract("MCP", "toy")
+        self.assertFalse((output.parent / "executed.txt").exists())
+        self.assertFalse((self.root / "executed.txt").exists())
+        self.assertFalse(list(self.root.rglob("*.lst")))
+        # GAMS syntax validation is deferred until the user runs the model.
+        model.write_text("not a valid GAMS model;\n")
+        self.extract("MCP", "toy")
+
+    def test_batch_preserves_defaults_from_another_working_directory(self):
+        records = [
+            {"name": "defaulted", "type": "MCP", "file": "MCP/defaulted.gms"},
+            {"name": "other", "type": "VI", "file": "VI/other.gms"},
+        ]
+        (self.root / "MCP" / "defaulted.gms").write_text(
+            "$if not set dimension $set dimension 2\nset i /1*%dimension%/;\n"
+        )
+        (self.root / "VI" / "other.gms").write_text("* Another standalone model\n")
+        (self.root / "problems.json").write_text(json.dumps({"problems": records}))
+        (self.caller / "problems.txt").write_text("# Models\nother\ndefaulted\n")
+        result = subprocess.run(
+            [sys.executable, str(self.root / "extractProblem.py"), "extractList", "--file", "problems.txt"],
+            cwd=self.caller, env=self.environment, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout[-2000:] + result.stderr)
+        self.assertIn("2 extracted, 0 skipped, 0 failed", result.stdout)
+        self.assertEqual(result.stderr, "")
+        for record in records:
+            self.assertEqual(
+                (self.root / "tempMCPs" / f"{record['name']}.gms").read_bytes(),
+                (self.root / record["file"]).read_bytes(),
+            )
+        self.assertFalse(list(self.root.rglob("*.lst")))
+        self.assertFalse((self.caller / "tempMCPs").exists())
+
+
+@unittest.skipUnless(RUN_GAMS_TESTS, "Enable GAMS integration checks with --gams-tests")
+class GamsRunTests(CliExtractionFixture):
+    def test_copied_model_uses_defaults_and_gams_command_line_overrides(self):
+        model = self.root / "MCP" / "toy.gms"
+        model.write_text("""$if not set dimension $set dimension 2
 set i /1*%dimension%/;
 positive variable x(i);
 equation f(i);
 f(i).. x(i) - 1 =g= 0;
 model m /f.x/;
-file sentinel /'executed.txt'/;
-putclose sentinel 'The model was executed';
+file actual /'dimension.txt'/;
+putclose actual card(i):0:0;
 solve m using mcp;
+abort$(m.solvestat <> 1) 'Solver did not finish normally';
 """)
-        source = self.extract("MCP", "toy", "--dimension", "4")
-        self.assertRegex(source, r"1\s*\*\s*4")
-        self.assertFalse((self.root / "executed.txt").exists())
-        source = self.extract("MCP", "toy")
-        self.assertRegex(source, r"1\s*\*\s*2")
-        self.assertFalse((self.root / "executed.txt").exists())
+        output = self.extract("MCP", "toy")
+        before = output.read_bytes()
+        for options, expected in (([], "2"), (["--dimension=4"], "4")):
+            with self.subTest(options=options):
+                self.run_gams(output, "mcp=path", *options)
+                self.assertEqual((output.parent / "dimension.txt").read_text().strip(), expected)
+                self.assertEqual(output.read_bytes(), before)
 
-        previous = (self.root / "tempMCPs" / "toy.gms").read_bytes()
-        model.write_text("not a valid GAMS model;\n")
-        result = subprocess.run(
-            [sys.executable, str(self.root / "extractProblem.py"), "extract", "--type", "MCP", "--select", "toy"],
-            cwd=self.caller, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual((self.root / "tempMCPs" / "toy.gms").read_bytes(), previous)
+    def test_repository_models_compile_with_defaults_and_dimension_overrides(self):
+        for name, set_name, first, default in (
+            ("bai_haung", "t", 1, 200), ("bratu", "I", 0, 76), ("dirkse2", "I", 1, 25),
+        ):
+            shutil.copy2(ROOT / "MCP" / f"{name}.gms", self.root / "MCP" / f"{name}.gms")
+            output = self.extract("MCP", name)
+            for options, expected in (([], default), (["--dimension=3"], 3)):
+                with self.subTest(model=name, options=options):
+                    self.run_gams(output, "action=c", "dumpOpt=21", *options)
+                    expanded = output.with_suffix(".dmp").read_text()
+                    self.assertRegex(expanded, rf"(?i)\b{set_name}\s*/\s*{first}\s*\*\s*{expected}\s*/")
+                    self.assertEqual(output.read_bytes(), (self.root / "MCP" / output.name).read_bytes())
 
     def test_extracted_lp_retains_its_standalone_poly_writer(self):
         shutil.copy2(ROOT / "VI" / "agg.gms", self.root / "VI" / "agg.gms")
-        source = self.extract("VI", "agg")
-        check, solves = re.subn(r"(?im)^([ \t]*solve[^\n]+;)[ \t]*$", r"* \1", source)
+        output = self.extract("VI", "agg")
+        check, solves = re.subn(r"(?im)^([ \t]*solve[^\n]+;)[ \t]*$", r"* \1", output.read_text())
         self.assertEqual(solves, 1)
-        run_dir = self.root / "tempMCPs"
-        check_path = run_dir / "check_poly.gms"
+        check_path = output.parent / "check_poly.gms"
         check_path.write_text(check)
-        result = subprocess.run(
-            ["gams", str(check_path), "lo=2"], cwd=run_dir,
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        )
-        log = run_dir / "check_poly.log"
-        self.assertEqual(result.returncode, 0, result.stdout + (log.read_text()[-2000:] if log.exists() else ""))
-        self.assertEqual((run_dir / "poly.txt").read_text().splitlines(), [f"e{i}" for i in range(164, 652)])
+        self.run_gams(check_path)
+        self.assertEqual((output.parent / "poly.txt").read_text().splitlines(), [f"e{i}" for i in range(164, 652)])
         self.assertFalse((self.root / "poly.txt").exists())
-
-    def test_batch_uses_defaults_and_skips_required_arguments_from_another_cwd(self):
-        (self.root / "MCP" / "defaulted.gms").write_text("""$if not setglobal dimension $setglobal dimension 2
-set i /1*%dimension%/;
-positive variable x(i);
-equation f(i);
-f(i).. x(i) - 1 =g= 0;
-model m /f.x/;
-solve m using mcp;
-""")
-        (self.root / "MCP" / "required.gms").write_text("set i /1*%dimension%/;\n")
-        shutil.copy2(ROOT / "VI" / "agg.gms", self.root / "VI" / "agg.gms")
-        (self.root / "problems.json").write_text(json.dumps({"problems": [
-            {"name": "agg", "type": "VI", "file": "VI/agg.gms"},
-            {"name": "defaulted", "type": "MCP", "file": "MCP/defaulted.gms"},
-            {"name": "required", "type": "MCP", "file": "MCP/required.gms", "required_arguments": ["dimension"]},
-        ]}))
-        (self.caller / "problems.txt").write_text("# Models\nagg\nrequired\ndefaulted\n")
-        result = subprocess.run(
-            [sys.executable, str(self.root / "extractProblem.py"), "extractList", "--file", "problems.txt"],
-            cwd=self.caller, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout[-2000:] + result.stderr)
-        self.assertIn("2 extracted, 1 skipped, 0 failed", result.stdout)
-        self.assertIn("requires arguments (--dimension)", result.stderr)
-        self.assertTrue((self.root / "tempMCPs" / "agg.gms").is_file())
-        defaulted = self.root / "tempMCPs" / "defaulted.gms"
-        self.assertRegex(defaulted.read_text(), r"1\s*\*\s*2")
-        self.assertFalse((self.root / "tempMCPs" / "required.gms").exists())
-        self.assertFalse((self.root / "required.lst").exists())
-        self.assertFalse((self.caller / "tempMCPs").exists())
 
 
 if __name__ == "__main__":

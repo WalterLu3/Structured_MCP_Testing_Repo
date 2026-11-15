@@ -10,7 +10,7 @@ General MCP/VI extraction uses `extractProblem.py` from the repository root. Sto
 ## Requirements
 
 - **Python 3** for the extraction scripts. These scripts use only the Python standard library.
-- **GAMS**, with the `gams` executable available on your `PATH` and a valid license for the selected model size and solvers.
+- **GAMS** for running models and experiments, with the `gams` executable available on your `PATH` and a valid license for the selected model size and solvers. Listing, registration, and extraction only require Python.
 - **PATH** for solving MCPs.
 - **EMP support**, including JAMS or ReSHOP as required by the selected model. The stochastic equilibrium algorithms and several stochastic optimization experiments use ReSHOP, including its embedded modeling syntax. Other experiments use PATHNLP or an LP/NLP solver.
 - **An experimental PATH build** for the PATHVI crash method and the experimental basis package options. Availability depends on the solver build; these options should not be assumed to exist in a standard installation.
@@ -25,7 +25,7 @@ The `solver` entry in the current checkout is an empty placeholder file. Experim
 | Path | Purpose |
 | --- | --- |
 | [`extractProblem.py`](extractProblem.py) | Register, list, or extract models individually or from a text list. |
-| [`problems.json`](problems.json) | Central registry of types, problem names, source files, and required arguments. |
+| [`problems.json`](problems.json) | Central registry of types, problem names, and source files. |
 | [`problems.txt`](problems.txt) | Example names-only list for batch extraction. |
 | [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
 | [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
@@ -55,20 +55,19 @@ python3 extractProblem.py list --type MCP
 python3 extractProblem.py list --type VI
 ```
 
-Generate a small MCP instance and solve it with PATH:
+Extract an MCP model and run a small instance with PATH:
 
 ```bash
 python3 extractProblem.py extract \
     --type MCP \
-    --select bai_haung \
-    --dimension 10
+    --select bai_haung
 
 cd tempMCPs
-gams bai_haung.gms mcp=path
+gams bai_haung.gms mcp=path --dimension=10
 cd ..
 ```
 
-The generated model is saved as `tempMCPs/bai_haung.gms`. The `tempMCPs/` folder is created automatically and ignored by Git. Extracted models with different names can coexist; extracting the same name again replaces that file after a successful compilation. Names are shared across types, so models with the same `--select` value use the same output path. An existing root-level `tempMCP.gms` is left untouched.
+The source is copied unchanged to `tempMCPs/bai_haung.gms`, retaining its default dimension of 200. The GAMS call above overrides that value for this run. The `tempMCPs/` folder is created automatically and ignored by Git. Extracted models with different names can coexist; extracting the same name again replaces that file after a successful copy. Names are shared across types, so models with the same `--select` value use the same output path. An existing root-level `tempMCP.gms` is left untouched.
 
 To extract several registered models, put one name per line in a text file, such as the included [`problems.txt`](problems.txt):
 
@@ -83,38 +82,46 @@ dirkse2
 python3 extractProblem.py extractList --file problems.txt
 ```
 
-The command looks up each name across all types in `problems.json`; no `--type` is needed. This example generates `tempMCPs/agg.gms`, `tempMCPs/bai_haung.gms`, and `tempMCPs/dirkse2.gms`. Model defaults are used without overrides, including the default dimensions of `bai_haung` and `dirkse2`. Extraction compiles the models without executing their solve statements.
+The command looks up each name across all types in `problems.json`; no `--type` is needed. This example copies the sources to `tempMCPs/agg.gms`, `tempMCPs/bai_haung.gms`, and `tempMCPs/dirkse2.gms`. Their defaults and parameter references are preserved. Extraction does not compile or execute the models.
 
-Blank lines and comments starting with `#` are ignored. Repeated names are extracted once. A model whose registry record lists `required_arguments` is skipped with a warning asking the user to generate it separately with the necessary arguments. These skips leave existing outputs untouched. Required arguments are declared in the registry by the model author, rather than inferred from GAMS source; see the registration instructions below.
+Blank lines and comments starting with `#` are ignored. Repeated names are extracted once. Each configurable model should define its own defaults so it can be run independently after extraction.
 
-Unknown names, names registered under multiple types, missing source files, and compilation errors are reported, and the command continues with later names. Resolve ambiguous names with the single-model `extract --type ... --select ...` command. A final summary reports extracted, skipped, and failed entries. The exit status is nonzero if any entries failed; skipping declared required arguments or duplicates alone is successful. The input file path is relative to the caller's working directory; outputs always go into this repository's `tempMCPs/` folder.
+Unknown names, names registered under multiple types, missing source files, and copying errors are reported, and the command continues with later names. Resolve ambiguous names with the single-model `extract --type ... --select ...` command. A final summary reports extracted, skipped, and failed entries. The exit status is nonzero if any entries failed; skipping duplicates alone is successful. The input file path is relative to the caller's working directory; outputs always go into this repository's `tempMCPs/` folder.
 
 ## Extracting problem instances
 
 The examples below assume the repository root as the current directory:
 
 ```text
-python3 extractProblem.py extract --type PROBLEM_TYPE --select MODEL_NAME [OPTIONS]
+python3 extractProblem.py extract --type PROBLEM_TYPE --select MODEL_NAME
 ```
 
 | Argument | Description |
 | --- | --- |
 | `--type` | Required. Selects the type folder, initially `MCP` or `VI`. |
 | `--select` | Required. Selects the model name without the `.gms` extension. |
-| `--dimension` | Sets the dimension for models that use this parameter. Supply it when extracting a parameterized model; other models have fixed sizes. |
 
-The root script selects `<type>/<model>.gms` and calls GAMS directly. Model lookup and compilation use the script's directory, and output is written to `<repository>/tempMCPs/<model>.gms`, regardless of the directory from which the script is invoked. The script prints the completed output path.
+The root script copies `<type>/<model>.gms` to `<repository>/tempMCPs/<model>.gms`, regardless of the directory from which the script is invoked. It prints the completed output path. The source is copied byte for byte, including parameter defaults, `%...%` references, solve statements, and any code that writes `poly.txt`. A failed copy preserves the previous output.
 
-Only explicitly supplied modeling parameters are forwarded to GAMS, using names such as `--dimension=200`. Omitted parameters retain the defaults defined by the model. Extraction replaces the selected output file only after a successful compilation; a failed compilation preserves existing outputs.
+The Python extractor accepts only `--type` and `--select`; model parameters are supplied directly to GAMS when running the copied file. Each parameterized source should define defaults using this pattern:
 
-For example, generate the thesis MCP example with dimension 200:
+```gams
+$if not set dimension $set dimension 200
+```
+
+For example, extract the thesis MCP example and run it with its default dimension of 200:
 
 ```bash
 python3 extractProblem.py extract \
     --type MCP \
-    --select bai_haung \
-    --dimension 200
+    --select bai_haung
+
+cd tempMCPs
+gams bai_haung.gms mcp=path
+cd ..
 ```
+
+To use another dimension, run `gams bai_haung.gms mcp=path --dimension=543` from `tempMCPs/`. This overrides the default for that run without editing the copied file.
 
 To extract an existing VI-structured MCP, use the Bertsekas optimal control model:
 
@@ -124,9 +131,9 @@ python3 extractProblem.py extract \
     --select bert_oc
 ```
 
-This VI model has a fixed mesh in its source file, so the example does not pass `--dimension`.
+This VI model has a fixed mesh in its source file.
 
-Extraction uses GAMS compilation (`action=c`, `dumpOpt=21`) to expand the selected source without executing its solve statements. Models already expressed as MCPs can then be solved from `tempMCPs/<model>.gms`. Embedded GAMS code that writes `poly.txt` is retained in the extracted source. A source model that uses EMP still requires the corresponding EMP solver when executed.
+Extraction requires no GAMS installation and does not validate GAMS syntax. Compilation and execution happen when the copied model is run with GAMS. Extraction copies only the selected `.gms` file; any include files or external data must be made available separately. A source model that uses EMP still requires the corresponding EMP solver when executed.
 
 GAMS writes relative output files, including `poly.txt`, in the run's working directory. Run models from `tempMCPs/` to keep these files beside the extracted source. Solver option files and any other runtime inputs must also be available in that working directory. Running `gams tempMCPs/<model>.gms` from the repository root instead uses the repository root as the working directory.
 
@@ -141,7 +148,7 @@ python3 extractProblem.py --help
 python3 extractProblem.py extract --help
 ```
 
-The existing parameter flags shown by `extract --help` remain available and are forwarded directly to GAMS when supplied. They affect models that reference the corresponding GAMS parameters; the numerical data in pre-generated LP models are fixed at generation time. Type folders start with `MCP` and `VI` and can be extended with `addType`. Use the GAMS entry points below for stochastic experiments.
+Type folders start with `MCP` and `VI` and can be extended with `addType`. The numerical data in pre-generated LP models are fixed at generation time. Use the GAMS entry points below for stochastic experiments.
 
 ### Generating the LINLib LP collection
 
@@ -381,18 +388,7 @@ Each problem record contains its name without the `.gms` extension, its register
 
 Each `(type, name)` pair must be unique, and `file` must match `<type>/<name>.gms`. A name can be registered separately under different types. Keep parameter defaults in the GAMS source. Removing an entry removes that problem from the listing without deleting its source file.
 
-For a model that requires arguments with no defaults, add an optional `required_arguments` array to its record in `problems.json` after registration. Use command-line argument names without the leading `--`, for example:
-
-```json
-{
-  "name": "myMCP",
-  "type": "MCP",
-  "file": "MCP/myMCP.gms",
-  "required_arguments": ["dimension"]
-}
-```
-
-`extractList` skips this model and warns users to extract it separately, for example with `extract --type MCP --select myMCP --dimension 20`. Omit the field or use an empty array for models that need no arguments or provide defaults for all parameters. Update this metadata if the model's input requirements change. `addProblem` preserves existing records and creates new records without required arguments; add this field when importing a model that needs user-supplied values.
+Define defaults for all configurable inputs in the GAMS source before registering a model. This lets each example run independently and keeps model parameters out of the registry and the Python extractor.
 
 The registry controls `list` and `extractList`. Single-model extraction continues to select an existing `.gms` file directly using `--type` and `--select`.
 
@@ -400,10 +396,10 @@ The registry controls `list` and `extractList`. Single-model extraction continue
 
 Add a standalone `.gms` file directly to `MCP/`. Its filename becomes the name used with `--select`. Include the variables, equations, complementarity pairings, starting point, and solve statement.
 
-For a model with configurable size, use the GAMS parameter `%dimension%` and supply its value through `--dimension`. For example:
+For a model with configurable size, use `%dimension%` with a default in the source. Users can optionally supply `--dimension` when calling GAMS. For example:
 
 ```gams
-$if not setglobal dimension $setglobal dimension 10
+$if not set dimension $set dimension 10
 set i /1*%dimension%/;
 
 positive variable x(i);
@@ -419,7 +415,12 @@ Save this example as `MCP/myMCP.gms`, then register and extract it from the repo
 
 ```bash
 python3 extractProblem.py addProblem --type MCP --file MCP/myMCP.gms
-python3 extractProblem.py extract --type MCP --select myMCP --dimension 20
+python3 extractProblem.py extract --type MCP --select myMCP
+
+cd tempMCPs
+gams myMCP.gms mcp=path
+gams myMCP.gms mcp=path --dimension=20
+cd ..
 ```
 
 ### Models with VI structure
@@ -465,4 +466,4 @@ To include integration checks with an installed, licensed GAMS executable:
 python3 -B tests/test_extract_problem.py --gams-tests
 ```
 
-The integration checks use temporary repositories to verify parameter expansion, failure handling, and preservation of an exported LP's polyhedral row writer.
+The unit tests verify unchanged copies, copying failure handling, batch extraction, and registration without GAMS. The integration checks run copied models in temporary repositories to verify GAMS defaults, command-line overrides, and an exported LP's polyhedral row writer.

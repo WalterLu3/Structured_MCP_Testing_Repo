@@ -1,0 +1,612 @@
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=.9\textwidth]{images/testing_repo_structure.pdf}
+    \caption{Repository that stores the testing files in this thesis}
+    \label{figure:testing_repository_structure}
+\end{figure}
+
+\begin{comment}
+In this thesis, we improve the solution processes of the structured equilibrium problem in different scales: lower-level solver improvements in Chapter \ref{chapter:basisPackage} and Chapter \ref{chapter:pathvi}, mid-level theoretical justification and algorithm design in Chapter \ref{chapter:stochastic_optimization} and Chapter \ref{chapter:reshop}, and the high-level API design for ReSHOP, a new mathematical solver for tackling structured mathematical programs, in Chapter \ref{chapter:reshop_DSL}.
+\end{comment}
+
+In this thesis, we not only present the ideas, reasoning, and theoretical foundations behind our work in each chapter but also conduct extensive computational experiments to support and validate the proposed designs. Because these experiments span several chapters, we organize the corresponding experimental materials in a public online repository\footnote{\url{https://github.com/WalterLu3/Structured_MCP_Testing_Repo}}. This chapter describes the repository structure shown in Figure~\ref{figure:testing_repository_structure}, identifies the source files associated with each experiment, and explains the procedures for running the experiments. The goal is to make the experimental results and demonstrations in this thesis easier to reproduce and to provide users with a clear guide to navigating the repository and running the accompanying code.
+The testing repository serves two main purposes:
+\begin{enumerate}
+\item It provides a general-purpose script that allows users to generate MCP instances with and without VI structure.
+\item It enables users to reproduce the computational experiments presented in this thesis by providing instructions for the experiments associated with each chapter.
+\end{enumerate}
+
+We first explain how the repository can be used as a general-purpose testing framework for generating problem instances. We then describe in detail how to reproduce the experiments presented in this thesis.
+
+\section{General-Purpose Problem Generation}
+
+The testing repository provides a unified framework that allows users to extract problems from the problem set and add their own problems to it. The repository initially contains the following two problem types:
+\begin{enumerate}
+    \item MCPs: this category currently contains general MCPs.
+    \item VIs: this category contains MCPs with VI structure.
+\end{enumerate}
+
+The thesis introduces several classes of models, each with its own set of parameters that determine the size and structure of the resulting problem. For example, in the experiments on linear algebra improvements in Chapter~\ref{chapter:basisPackage}, the test models include a dimension parameter; increasing this parameter increases the size of the model.
+
+\subsection{Problem Extraction}
+
+\subsubsection{The Generation Script: \texttt{extractProblem.py}}
+
+The script \texttt{extractProblem.py} provides a unified interface for copying model source files from the repository into a working directory. It supports standard MCPs and models with variational inequality (VI) structure.
+
+The script saves the requested source in \texttt{tempMCPs/NAME.gms}, where \texttt{NAME} is the problem name supplied through \texttt{--select}. For problems with a configurable dimension, the GAMS source defines a default value. Users can override this value when running the copied file with GAMS.
+
+Each model is stored as a \texttt{.gms} file in its problem-type directory. Extraction copies the selected source unchanged, preserving its parameter defaults, compile-time variable references, solve statements, and any GAMS code that writes \texttt{poly.txt}. The Python script neither compiles nor executes the model and requires no GAMS installation. Compilation and execution occur when users subsequently run the copied file with GAMS. Only the selected source file is copied; any include files or external data must be made available separately.
+
+The \texttt{tempMCPs/} directory is created automatically in the repository containing the script. Models with different names can coexist in this directory. Extracting the same name again replaces its output only after a successful copy; a failed copy preserves the previous output. Because the output name does not include the problem type, models with the same name under different types share the same output path.
+
+\subsubsection{Basic Usage}
+
+The script can be executed from the command line using the following command:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py extract \
+       --type PROBLEM_TYPE --select PROBLEM_NAME
+\end{minted}
+
+The argument \texttt{--type} specifies the category of problem to generate. The initially supported values are:
+
+\begin{itemize}
+    \item \texttt{MCP}
+    \item \texttt{VI}
+\end{itemize}
+
+Individual extraction accepts only the problem type and name; model parameters are supplied directly to GAMS. New problem types can be registered using \texttt{addType}, as described below. The examples in this section assume that the current working directory is the repository's root directory and that \texttt{python} refers to Python~3. The stochastic optimization and stochastic equilibrium experiments are run directly from their respective directories, as described in the next section.
+
+\subsubsection{Command-Line Arguments}
+
+\begin{description}
+    \item[\texttt{--type}] Specifies the category of problem to generate. This argument is required for individual extraction. The initial values are \texttt{MCP} and \texttt{VI}; additional types can be registered using \texttt{addType}.
+
+    \item[\texttt{--select}] Specifies the name of the problem to generate, without the \texttt{.gms} extension. This argument is required for individual extraction.
+
+    \item[\texttt{--file}] Specifies an input file for \texttt{extractList} or \texttt{addProblem}. For \texttt{extractList}, it is a text file containing problem names. For \texttt{addProblem}, it is the \texttt{.gms} source file to import.
+\end{description}
+\begin{comment}
+\subsubsection{Command-Line Arguments}
+
+\begin{description}
+\item[\texttt{--type}] Specifies the category of problem to generate. This argument is required. Available values are \textbf{MCP}, \textbf{VI}, \textbf{StochasticOptimization}, and \textbf{StochasticEquilibrium}.
+
+\item[\texttt{--select}] Specifies the name of the problem instance to generate. This argument is used for problems of type \textbf{MCP} and \textbf{VI}. It is not used for stochastic optimization or stochastic equilibrium problems.
+
+\item[\texttt{--dimension}] Specifies the dimension or size of the selected problem instance. This argument is optional and is used only by problem instances whose size is parameterized by a dimension.
+
+
+\item[\texttt{--nchildren}] Specifies the number of children associated with each nonterminal node in the scenario tree. This argument is used for stochastic optimization problems.
+
+\item[\texttt{--nstage}] Specifies the number of stages in the scenario tree. This argument is used for stochastic optimization problems.
+
+\item[\texttt{--data}] Specifies the scenario-tree dataset used for a stochastic equilibrium problem. The available values are \texttt{tree2} and \texttt{tree3}.
+
+\item[\texttt{--quad}] Specifies the weight of the quadratic term in the stage-cost function of a stochastic equilibrium problem.
+
+\item[\texttt{--lambda}] Specifies the risk-aversion weight used in a stochastic equilibrium problem. Its value must lie in the interval $[0,1]$.
+
+\item[\texttt{--alpha}] Specifies the confidence-level parameter used in the conditional value-at-risk formulation. Its value must lie in the interval $[0,1]$.
+
+\item[\texttt{--demandType}] Specifies the demand-function type used in a stochastic equilibrium problem. The available values are \texttt{1}, \texttt{2}, and \texttt{3}.
+
+\item[\texttt{--randomSeed}] Specifies the random seed used during data generation. This argument applies to stochastic optimization and stochastic equilibrium problems.
+
+\end{description}
+\end{comment}
+
+
+\subsubsection{Listing Available Problems}
+
+The repository maintains a central record file, \texttt{problems.json}, that stores the registered problem types and the name, type, and source path of each problem. To list the available problems of a given type, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py list --type MCP
+python extractProblem.py list --type VI
+\end{minted}
+
+The \texttt{list} command reads the record file and reports registered problem names in alphabetical order. Only problems whose source files exist locally are listed; a warning is printed for each registered problem whose source file is missing. Files that have not been registered are not included in the list. This allows helper files to remain in a problem directory without being reported as test problems.
+
+The record file also includes large generated models that are excluded from Git. These models must be generated locally before they can be listed or extracted. Individual extraction selects the source file directly using \texttt{--type} and \texttt{--select}, whereas listing and batch extraction use the record file.
+
+\subsubsection{Generating an MCP Instance}
+
+To generate a standard MCP instance, users specify the problem name using \texttt{--select}. For example,
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py extract \
+       --type MCP --select bai_haung
+\end{minted}
+
+This command copies the MCP source to \texttt{tempMCPs/bai\_haung.gms}. The copied file retains the default dimension of 200 defined in the source. A different dimension can be supplied when running GAMS, as shown below.
+
+
+\subsubsection{Generating a VI Instance}
+
+A VI instance can be generated in a similar manner:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py extract \
+       --type VI --select agg
+\end{minted}
+
+The selected model already contains the MCP formulation of the VI associated with the LP instance \texttt{agg}. Its source is copied unchanged to \texttt{tempMCPs/agg.gms}. The standalone LINLib models in the \texttt{VI} directory also contain GAMS code that writes the corresponding \texttt{poly.txt} before the final solve. This code is retained during extraction and executes when the copied model is run.
+
+\subsubsection{Extracting Multiple Problems}
+
+Users can extract several problems by providing a text file containing one problem name per line. For example, \texttt{problems.txt} can contain:
+
+\begin{minted}[frame=lines, linenos]{text}
+# problems.txt
+agg
+bai_haung
+dirkse2
+\end{minted}
+
+To extract these problems, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py extractList --file problems.txt
+\end{minted}
+
+The script looks up each name across all problem types registered in \texttt{problems.json}, so users do not need to supply \texttt{--type}. This example copies the sources to \texttt{tempMCPs/agg.gms}, \texttt{tempMCPs/bai\_haung.gms}, and \texttt{tempMCPs/dirkse2.gms}. No parameter values are supplied through the text file. The defaults and parameter references defined in each source are preserved for subsequent GAMS runs.
+
+Every configurable example should define defaults in its GAMS source so it can be run independently. Batch extraction copies models without interpreting their parameters.
+
+Blank lines and comments starting with \texttt{\#} are ignored, and repeated names are extracted only once. If a name is unknown or registered under multiple types, the script reports the problem and continues with the remaining names. Missing source files and copying failures are also reported without stopping subsequent extractions. A final summary reports the numbers of extracted, skipped, and failed entries. Problems with ambiguous names can be extracted individually by specifying their type.
+
+\subsubsection{Running a Generated Model}
+
+After extraction, users can run a generated MCP model from the \texttt{tempMCPs/} directory. For example:
+
+\begin{minted}[frame=lines, linenos]{text}
+cd tempMCPs
+gams bai_haung.gms mcp=path
+cd ..
+\end{minted}
+
+This run uses the model's default dimension. To override it for a particular run, supply the parameter directly to GAMS:
+
+\begin{minted}[frame=lines, linenos]{text}
+cd tempMCPs
+gams bai_haung.gms mcp=path --dimension=543
+cd ..
+\end{minted}
+
+The override changes the value used for this run without changing the default stored in the copied source. The Python script does not accept model parameter overrides.
+
+GAMS writes relative output files in its working directory. Running the model from \texttt{tempMCPs/} therefore places files such as \texttt{poly.txt} beside the generated model. Solver option files and any other runtime inputs must also be available in that working directory.
+
+\begin{comment}
+\subsubsection{Generating a Stochastic Optimization Instance}
+
+For a stochastic optimization problem, users specify the number of stages and the number of children per nonterminal scenario-tree node. For example,
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py \
+       --type StochasticOptimization \
+       --nstage 5 \
+       --nchildren 3 \
+       --randomSeed 10
+\end{minted}
+
+This command generates a five-stage stochastic optimization problem in which each nonterminal node has three child nodes. The random seed is set to 10 so that the generated data can be reproduced.
+
+The \texttt{--select} argument is not required for stochastic optimization problems because the script uses a predefined stochastic optimization model whose size and data are controlled by the supplied parameters.
+
+In this case, two MCP models are generated in \textbf{tempFolder}:
+\begin{enumerate}
+    \item \texttt{StochasticOptimization\_RU\_Formulation.gms}
+    \item \texttt{StochasticOptimization\_Equilibrium\_Formulation.gms}
+\end{enumerate}
+ The former represents the KKT conditions of the Rockafellar--Uryasev formulation for the Clear Lake example, as given in \eqref{equation:KKTofRU}, whereas the latter represents the MCP system associated with the equilibrium formulation in \eqref{equation:KKTofEquilibrium} in Chapter~\ref{chapter:stochastic_optimization}.
+
+
+\subsubsection{Generating a Stochastic Equilibrium Instance}
+
+A stochastic equilibrium problem can be generated by specifying the scenario-tree dataset and the relevant model parameters. For example,
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py \
+       --type StochasticEquilibrium \
+       --data tree3 \
+       --quad 0.1 \
+       --lambda 0.5 \
+       --alpha 0.95 \
+       --demandType 2 \
+       --randomSeed 10
+\end{minted}
+
+This command generates a stochastic equilibrium problem using the scenario tree specified by \texttt{tree3}. The quadratic stage-cost weight is set to 0.1, the risk-aversion weight is set to 0.5, the CVaR confidence level is set to 0.95, and demand type 2 is used. A corresponding MCP model, \texttt{StochasticEquilibrium.gms}, associated with the equilibrium formulation applied to all the producers in the problem instances, as described in Proposition~\ref{proposition:stochasticEquilibriumEquFormulation}, is copied into the \texttt{tempFolder}.
+
+\subsubsection{Generated Output}
+
+After generating the selected problem, the script creates the directory
+
+\begin{minted}[frame=lines, linenos]{text}
+tempFolder/
+\end{minted}
+
+in the current working directory. The generated MCP formulation and any files required to execute the problem are copied into this directory..
+
+\subsubsection{Reproducibility}
+
+For problems involving randomly generated data, the \texttt{--randomSeed} argument can be used to reproduce the same problem instance. This option is used only when generating the stochastic optimization and stochastic equilibrium examples. Executing the script multiple times with the same problem parameters and random seed should produce identical model data.
+
+For example,
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py
+       --type StochasticOptimization
+       --nstage 4
+       --nchildren 2
+       --randomSeed 20
+\end{minted}
+should generate the same stochastic optimization instance each time it is executed, provided that the implementation and software environment remain unchanged.
+\end{comment}
+\subsection{Adding New Problems}
+
+This section explains how to add new problems to the testing repository. Problems can be added to the existing MCP and VI types or to a newly registered type.
+
+\subsubsection{Registering a Problem Type}
+
+To register a new problem type and create its directory, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py addType --type NCP
+\end{minted}
+
+This command adds \texttt{NCP} to the \texttt{types} array in \texttt{problems.json} and creates an \texttt{NCP} directory in the repository. The directory includes an empty \texttt{.gitkeep} file so it can be tracked by Git before problems are added. If the directory already exists, its contents are preserved. Duplicate type names, including case variants, are rejected. Type names must start with a letter and contain only letters, digits, underscores, or hyphens.
+
+A newly registered type has no listed problems until individual problems have been registered under it. It can subsequently be used with the same listing, registration, and extraction commands as the existing types.
+
+\subsubsection{Registering a Problem}
+
+To import a new problem from a user-provided source file, specify its registered type and file path:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py addProblem \
+       --type MCP --file /path/to/file/newProblem.gms
+\end{minted}
+
+The script copies the file to \texttt{MCP/newProblem.gms} and adds its record to \texttt{problems.json}. The source filename determines the registered problem name, and the original source file is preserved. If the file is already in the intended type directory, users can register it in place:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py addProblem \
+       --type MCP --file MCP/newProblem.gms
+\end{minted}
+
+Registration does not compile or solve the model. It imports only the specified source file; any include files or other dependencies must be made available separately. Duplicate registrations within a type and attempts to overwrite an existing destination file are rejected. After registration, the problem can be listed or extracted using:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py list --type MCP
+python extractProblem.py extract --type MCP --select newProblem
+\end{minted}
+
+Each problem record contains its name without the \texttt{.gms} extension, its registered type, and its source path relative to the repository. For example:
+
+\begin{minted}[frame=lines, linenos]{json}
+{
+  "name": "newProblem",
+  "type": "MCP",
+  "file": "MCP/newProblem.gms"
+}
+\end{minted}
+
+Each combination of type and problem name must be unique, and the source path must follow the form \texttt{TYPE/NAME.gms}. A name can be registered under different types, but such a name must be extracted individually because it is ambiguous in a names-only batch list.
+
+All configurable inputs should have defaults defined in the GAMS source before registration. Parameter values are handled by GAMS, so the registry records only the model's name, type, and source path.
+
+Removing a problem record from \texttt{problems.json} removes that problem from listing and batch lookup without deleting its source file. The following examples describe how to prepare MCP and VI source files for registration.
+
+\subsubsection{MCP}
+
+To add a problem named \texttt{newProblem} that accepts an input parameter named \texttt{dimension}, create a file named \texttt{newProblem.gms} in the \texttt{MCP} directory:
+
+\begin{minted}[frame=lines, linenos]{text}
+* newProblem.gms
+$if not set dimension $set dimension 20
+set t / 1 * %dimension% /;
+alias(t,tt);
+
+positive variables x(t,tt);
+equations f(t,tt);
+
+f(t,tt)..
+   - x(t - 1,tt) + 4*x(t,tt) - 1*x(t+1,tt)
+   - 1*x(t,tt+1) - 1*x(t,tt-1)
+   + mod(card(t)*(ord(t)-1) + ord(tt) + 1, 2)
+   - mod(card(t)*(ord(t)-1) + ord(tt), 2)
+  =g= 0;
+
+model foo /f.x/;
+
+x.l(t,tt) = 40;
+
+solve foo using mcp;
+\end{minted}
+
+The first dollar control statement defines a default dimension of 20 if no value has been supplied. This lets the model run independently. Extraction copies the source to \texttt{tempMCPs/newProblem.gms}, preserving both the default declaration and references to \texttt{\%dimension\%}.
+
+Register the source file using \texttt{addProblem} as shown above. To extract the model individually, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py extract \
+       --type MCP --select newProblem
+\end{minted}
+
+To run the copied model with a dimension of 40, supply the override to GAMS:
+
+\begin{minted}[frame=lines, linenos]{text}
+cd tempMCPs
+gams newProblem.gms mcp=path --dimension=40
+cd ..
+\end{minted}
+
+Omitting \texttt{--dimension} from the GAMS call uses the default dimension of 20. Other configurable inputs should follow the same default declaration pattern within their GAMS source files.
+
+\subsubsection{MCP with VI Structure}
+
+For an MCP with VI structure, users must include code that writes the names of the polyhedral rows to a file named \texttt{poly.txt}, as described in Section~\ref{section:PATHVIhowTo}.
+
+For example, to add a model named \texttt{exampleVI}, create a file named \texttt{exampleVI.gms} in the \texttt{VI} directory:
+
+\begin{minted}[frame=lines, linenos]{text}
+* File: exampleVI.gms
+* This file contains a VI example with a skew-symmetric structure.
+Variables  x1,x2,u3,u4,u5,u6;
+Negative Variables  u3,u6;
+Positive Variables  u4,u5;
+Equations  e1,e2,e3,e4,e5,e6;
+
+e1.. 5*x1*x1 - u3 - u4 - u5 - u6 =N= -5;
+e2.. -x2*x2 - u3 - u4 + u5 + u6 =N= -2;
+e3..    x1 + x2 =L= 1;
+e4..    x1 + x2 =G= -1;
+e5..    x1 - x2 =G= -1;
+e6..    x1 - x2 =L= 1;
+Model m / e1.x1,e2.x2,e3.u3,e4.u4,e5.u5,e6.u6 /;
+
+* Write the polyhedral row names.
+file polystructure / 'poly.txt' /;
+put polystructure;
+put 'e3'/ 'e4'/ 'e5'/ 'e6'/;
+putclose polystructure;
+Solve m using MCP;
+\end{minted}
+
+In this example, we manually specify which constraints in model \texttt{m} are polyhedral rows and write their names to \texttt{poly.txt}. When \texttt{extractProblem.py} is run on this model, the generated model is saved as \texttt{tempMCPs/exampleVI.gms}. Although this example does not use the \texttt{dimension} parameter, other VI examples can include such a parameter to generate MCP instances of different sizes while preserving the VI structure.
+
+After creating the source file, register and extract it using:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py addProblem --type VI --file VI/exampleVI.gms
+python extractProblem.py extract --type VI --select exampleVI
+\end{minted}
+
+The \texttt{poly.txt} writer is retained in the generated source. The file is written when the generated model is executed, before its solve statement, rather than during extraction.
+
+The next section explains how to reproduce the experiments presented in this thesis.
+
+\section{Reproducing the Thesis Experiments}
+
+\subsection{PATHVI Experiments}
+
+This section provides detailed instructions for reproducing the experiments presented in Section~\ref{section:experiment}.
+
+To extract a VI instance, run the following command from the repository's root directory. This example assumes that \texttt{exampleVI.gms} has been added as described above:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py \
+       extract \
+       --type VI \
+       --select exampleVI
+\end{minted}
+
+The corresponding MCP model is saved as \texttt{tempMCPs/exampleVI.gms}. The PATHVI experiments use the following three option file configurations, which should be placed in \texttt{tempMCPs/}:
+
+\begin{enumerate}
+    \item PNewton:
+
+\begin{minted}[frame=lines, linenos]{text}
+# filename: path.opt
+crash_method pnewton
+\end{minted}
+
+    \item Lemke Ray Start:
+
+\begin{minted}[frame=lines, linenos]{text}
+# filename: path.op2
+crash_method none
+crash_perturb 0
+lemke_start first
+\end{minted}
+
+    \item PATHVI Ray Start:
+
+\begin{minted}[frame=lines, linenos]{text}
+# filename: path.op3
+crash_method pathvi
+pathvi_filename poly.txt
+\end{minted}
+\end{enumerate}
+
+The experimental version of the PATH solver that includes the PATHVI crash method is stored in the \texttt{solver} directory. This directory also contains a \texttt{README.md} file with instructions for incorporating the experimental version into a GAMS installation. To reproduce the experimental results, run the generated \texttt{exampleVI.gms} model from \texttt{tempMCPs/} using the experimental solver with each of the option file configurations listed above. For example, adopting PNewton corresponds to setting \texttt{optfile} to 1, while adopting Lemke Ray Start corresponds to setting \texttt{optfile} to 2.
+
+\begin{minted}[frame=lines, linenos]{text}
+cd tempMCPs
+gams exampleVI.gms mcp=path optfile=1
+cd ..
+\end{minted}
+
+Running the model from this directory also writes the corresponding \texttt{poly.txt} in \texttt{tempMCPs/}, where the PATHVI option file can find it.
+
+\begin{comment}
+\subsubsection{Purpose}
+The main purpose of the basis package experiments is to compare the difference in solution speed in terms of \textbf{time in seconds} across basis options, including lusol, blu\_lusol, umfpack, highs, and conopt.
+
+Therefore, the types of examples MCP we look for are those where PATH spends more time solving. In order to identify the difference in the speed of the basis factorization and basis update, we prepare 2 categories of examples. One category includes models where PATH solves them mostly in the PNewton crash step, with few to no major iterations, and therefore basis factorizations account for most of the solution time. The other categories include examples where a larger number of iterations is required to solve the problem. In order to make some of the examples in the latter category take on more major and minor iterations in the main process of PATH, we may turn off the crash method in the option files.
+
+\subsubsection{Source Files}
+There are three main sources of testing examples.
+\begin{enumerate}
+    \item MCPLIB\parencite{dirkse1995mcplib}: we took a subset of MCP model files that take longer to run from the MCPLIB.
+    \item LINLIB \footnote{https://github.com/GAMS-dev/gamsworld/tree/master/LINLib}: a subset of large-scale LP is taken from the LINLIB. We formulated each LP as a VI using Extended Mathematical Programs\parencite{ferris2009extended} in GAMS and solved the MCP related to the VI using PATH.
+    \item genlibgnep: This is a synthetic set of experiments on MOPEC. The detailed mathematical formulation can be found in Section \ref{section:experiment_pathvi_mopec}.
+\end{enumerate}
+
+\subsubsection{Execution Instructions}
+The basis package experiments lie under the \texttt{basis\_package} folder. In \texttt{basis\_package}, each example has its own separate folder. For example, in the LINLIB experiment in Section \ref{section:basis_experiment_linlib}, there is a \texttt{LINLIB} folder for it. Each sub-folder in \texttt{basis\_package} has a script \texttt{run.sh}. In order to run the experiment in the folder called \texttt{folderName}, simply run
+\begin{minted}[frame=lines, linenos]{text}
+cd folderName
+bash run.sh UMFPACK_Libarary_PATH
+\end{minted}
+The experiment results will be stored in \textbf{folderName/result} as a separate log file with the basis option used in the file name. The solution time can be inspected at the end of the log file, where PATH reports the total time. Note that we require that users give \texttt{UMFPACK\_Libarary\_PATH} as UMFPACK is not compiled with the GAMS distribution, and the users need to compile it on their own. The compilation process is mentioned in Section \ref{section:compileUMFPACK}. After compiling UMFPACK, put the absolute path to the basis library as the \texttt{UMFPACK\_Libarary\_PATH} mentioned above.
+
+\subsection{PATHVI Experiments}
+In this section, we provide more details for the experiments in Section \ref{section:experiment}.
+
+
+
+
+
+
+\subsubsection{Source Files}
+
+There are four main sources of the experiment files:
+\begin{enumerate}
+    \item Synthetic MOPEC
+    \item General Nash Equilibrium Problem from \parencite{kim2018structure}
+    \item LINLIB
+    \item MCPLIB \parencite{dirkse1995mcplib}
+\end{enumerate}
+
+\subsubsection{Execution Instructions}
+The PATHVI package experiments are stored under the \texttt{pathvi} folder. Each sub-folder in \texttt{pathvi} (except for the LINLIB folder) has a script \texttt{run.sh}. We can run the following
+
+\begin{minted}[frame=lines, linenos]{text}
+cd folderName
+bash run.sh UMFPACK_Libarary_PATH
+\end{minted}
+
+For the LINLIB experiments, as there is a large collection of instances, we allow the users to run a specific instance by using the following
+
+\begin{minted}[frame=lines, linenos]{text}
+cd LINLib
+bash virun_buff.sh fileName
+# example:
+# bash virun_buff.sh 25fv47.gdx
+\end{minted}
+All the examples are stored in \texttt{.gdx} files in the \texttt{LINLib/instance} folder, and the descriptions for each of the examples can be found in the \href{https://github.com/GAMS-dev/gamsworld/tree/master/LINLib}{GAMS World Model repository}. The \texttt{fileName} should contain the \textbf{.gdx} at the end.
+
+All of the experiment results are in the form of a log file and will be stored in \textbf{LINLib/result} with a unique name based on the \texttt{fileName}. Note that for all the experiments for PATHVI, the scripts are written such that a \textbf{poly.txt} is automatically created to contain the polyhedral row information for the MCP, and it will later be fed to the PATHVI crash method to aid the search for an implicit extreme point as shown in Section \ref{section:PATHVIhowTo}.
+\end{comment}
+
+\subsection{Linear Algebra Option Experiments}
+
+This section provides detailed instructions for running the experiments presented in Section~\ref{section:experimentResults}.
+
+To test different basis packages on an MCP, first generate a problem instance using the following command:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py extract \
+       --type MCP --select bai_haung
+\end{minted}
+
+The generated MCP model is saved as \texttt{tempMCPs/bai\_haung.gms}. To test a particular basis package, run the model from \texttt{tempMCPs/} using a PATH option file (ex. path.opt or path.op1) in the same directory that specifies the desired factorization method. For example:
+
+\begin{minted}[frame=lines, linenos]{text}
+factorization_method lusol
+\end{minted}
+
+The available methods are \texttt{lusol}, \texttt{blu\_lusol}, \texttt{highs}, \texttt{conopt}, and \texttt{umfpack}.
+
+When using UMFPACK, also specify the path to the compiled UMFPACK basis library:
+
+\begin{minted}[frame=lines, linenos]{text}
+factorization_library_name PATH_TO_UMFPACK
+\end{minted}
+
+Detailed instructions for compiling the UMFPACK basis package can be found in Section~\ref{section:compileUMFPACK}. In order to adopt the option files, one needs to specify the \textbf{optfile} option when running \texttt{gams} binary. The detailed document of using GAMS option files can be found in the GAMS website\footnote{\url{https://www.gams.com/latest/docs/UG_GamsCall.html\#GAMSAOoptfile}}.
+
+The following subsections explain how to reproduce the experiments presented in Chapters~\ref{chapter:stochastic_optimization} and~\ref{chapter:reshop}. These experiments are run directly from their respective directories. They include comparisons of different formulations and solution methods, as well as implementations of several decomposition algorithms.
+
+\subsection{Stochastic Optimization Experiments}
+
+This section provides instructions for running the experiments presented in Chapter~\ref{chapter:stochastic_optimization}.
+
+\subsubsection{Purpose}
+
+In these experiments, we solve the stochastic optimization problem based on the Clear Lake example using two equivalent formulations: the Rockafellar--Uryasev formulation and the equilibrium formulation. We test different methods for solving these formulations and compare their solution times. For the decomposition algorithms, we also record the number of iterations performed by the PATH solver. The experiment files are stored in the \texttt{stochastic\_optimization} directory.
+
+\subsubsection{Source Files}
+
+The experiment directory is organized as follows:
+\begin{enumerate}
+    \item \texttt{clearlak-ecvarup\_main.gms}: the main script for running the experiments.
+    \item \texttt{clearlak-ecvarup\_model.gms}: the file containing most of the variables, equations, and models reused across different algorithms.
+    \item \texttt{experiments/}: the directory containing implementations of different algorithms that use the models defined in \texttt{clearlak-ecvarup\_model.gms}.
+\end{enumerate}
+
+This organization allows models to be reused across algorithms and makes it easier to add new algorithms.
+
+\subsubsection{Execution Instructions}
+
+To run an individual experiment, change to the \texttt{stochastic\_optimization} directory and execute the main script. Starting from the repository's root directory, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+cd stochastic_optimization
+gams clearlak-ecvarup_main.gms --nstage=4 --nchildren=3 \
+     --randomSeed=1 --experimentType=RU-PATH
+\end{minted}
+
+The option \texttt{--nstage} specifies the number of stages in the scenario tree, while \texttt{--nchildren} specifies the number of child nodes associated with each nonterminal node. The option \texttt{--randomSeed} specifies the random seed used during data generation, and \texttt{--experimentType} selects the solution method.
+
+In this example, the command solves an instance with four stages, three child nodes per nonterminal node, and random seed $1$ using the RU-PATH method. Supported values of \texttt{--experimentType} include \texttt{RU}, \texttt{RU-PATH}, \texttt{Equilibrium}, \texttt{PD-PATH}, \texttt{PD-PATH-LP}, and \texttt{PD-PATH-NLP}. Additional experiment options can be found in \texttt{clearlak-ecvarup\_main.gms}.
+
+\subsection{Stochastic Equilibrium Experiments}
+
+This section explains how to reproduce the experiments for the stochastic equilibrium problem presented in Section~\ref{section:stocEquAlgorithmDesign}. The experiment files are stored in the \texttt{stochastic\_equilibrium} directory.
+
+\subsubsection{Purpose}
+
+These experiments compare the success rates and solution times of algorithms based on risk decomposition.
+
+\subsubsection{Source Files}
+
+The experiment directory is organized as follows:
+\begin{enumerate}
+    \item \texttt{main.gms}: the main script for running the experiments.
+    \item \texttt{data\_dispatch.gms}: the file containing the data generation and loading procedures.
+    \item \texttt{parameters.gms}: the file defining the input parameters and their default values.
+    \item \texttt{model\_dispatch.gms}: the file containing models reused across the algorithms, including the primal model and the dual risk models.
+    \item \texttt{algorithms/}: the directory containing the implementation of each algorithm in a separate \texttt{.gms} file.
+\end{enumerate}
+
+\subsubsection{Execution Instructions}
+
+To run an individual experiment, change to the \texttt{stochastic\_equilibrium} directory and execute the main script. Starting from the repository's root directory, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+cd stochastic_equilibrium
+gams main.gms --data=tree3 --randomSeed=1 --quad=10 --lambda=0.3 \
+     --alpha=0.74 --demandType=1 --algorithm=PD-PATH
+\end{minted}
+
+The option \texttt{--data} specifies the scenario-tree dataset used in the experiment. The available values are \texttt{tree2} and \texttt{tree3}; this example uses \texttt{tree3}. The option \texttt{--randomSeed} specifies the random seed used during data generation, while \texttt{--quad} specifies the weight of the quadratic term in the agents' stage-cost functions.
+
+The options \texttt{--lambda} and \texttt{--alpha} specify the risk-aversion weight and the confidence level, respectively, in the coherent risk measure
+\[
+    (1-\lambda)\mathbb{E}(\cdot)
+    + \lambda \operatorname{CVaR}_{\alpha}(\cdot).
+\]
+Both parameters take values in the interval $[0,1]$. The option \texttt{--demandType} selects among the three demand specifications \parencite{shenThesis2023} and accepts the values \texttt{1}, \texttt{2}, and \texttt{3}.
+
+The option \texttt{--algorithm} selects the solution algorithm. In this example, it is set to \texttt{PD-PATH}. Available algorithms include \texttt{PATH}, \texttt{PATH-RN}, \texttt{PD}, \texttt{PD-PATH}, \texttt{PD-CC-PATH}, \texttt{PD-TrustRegion-PATH}, and \texttt{PD-LineSearch-PATH}, as described in Section~\ref{section:stocEquAlgorithmDesign}. Any option not explicitly supplied uses the corresponding default value defined in the file \texttt{parameters.gms}.
+
+\section{Summary}
+
+The testing repository enables users to reproduce the experiments presented in this thesis, add their own test problems, and collaboratively expand an open-source test set for use across a variety of settings.
