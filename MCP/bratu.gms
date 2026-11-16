@@ -18,7 +18,7 @@ $inlinecom /* */
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 
-$if not setglobal dimension $setglobal dimension 76
+$if not set dimension $set dimension 76
 
 sets
 I	/ 0 * %dimension% /,

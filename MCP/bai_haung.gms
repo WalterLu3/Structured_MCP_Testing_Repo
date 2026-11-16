@@ -1,7 +1,7 @@
 
 * This comes from a paper by bai and haung.
 
-$if not setglobal dimension $setglobal dimension 200
+$if not set dimension $set dimension 200
 * $setglobal ntilde 200
 
 set t / 1 * %dimension% /;

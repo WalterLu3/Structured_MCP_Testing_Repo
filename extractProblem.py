@@ -1,16 +1,15 @@
 """Register, list, or extract models individually or from a names-only list.
 
 The problem catalog is stored in problems.json beside this script.
-Each type has a folder beside this script. Extraction calls GAMS
-directly to expand the selected source and its compile-time parameters.
-The expanded source keeps its solve statements for the user to run later.
+Each type has a folder beside this script. Extraction copies the selected
+source unchanged into tempMCPs/. Parameter defaults belong in the GAMS
+source; users can override them when running GAMS separately.
 """
 
 import argparse
 import json
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -45,7 +44,7 @@ def parse_arguments(argv=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     extract_parser = subparsers.add_parser(
-        "extract", help="Extract a problem instance."
+        "extract", help="Copy a problem's GAMS source into tempMCPs/."
     )
     batch_parser = subparsers.add_parser(
         "extractList", help="Extract registered problems named in a text file."
@@ -100,81 +99,11 @@ def parse_arguments(argv=None):
         help="Name of the problem instance.",
     )
 
-    # None means "not supplied": preserve the default declared by the GAMS model.
-    extract_parser.add_argument(
-        "--dimension",
-        type=int,
-        default=None,
-        help="Dimension of the selected MCP or VI problem.",
-    )
-
-    # Keep the existing optional flags. Each affects only models that reference
-    # its corresponding GAMS parameter; extraction forwards supplied values.
-    extract_parser.add_argument(
-        "--nchildren",
-        type=int,
-        default=None,
-        help="Number of children of each nonterminal scenario-tree node.",
-    )
-
-    extract_parser.add_argument(
-        "--nstage",
-        type=int,
-        default=None,
-        help="Number of stages in the scenario tree.",
-    )
-
-    extract_parser.add_argument(
-        "--data",
-        type=str,
-        choices=["tree2", "tree3"],
-        default=None,
-        help="Scenario-tree dataset for stochastic equilibrium problems.",
-    )
-
-    extract_parser.add_argument(
-        "--quad",
-        type=float,
-        default=None,
-        help="Weight of the quadratic term in the stage-cost function.",
-    )
-
-    # Python reserves "lambda", so argparse stores this option as lambda_.
-    extract_parser.add_argument(
-        "--lambda",
-        dest="lambda_",
-        type=float,
-        default=None,
-        help="Risk-aversion weight in [0, 1].",
-    )
-
-    extract_parser.add_argument(
-        "--alpha",
-        type=float,
-        default=None,
-        help="CVaR confidence-level parameter in [0, 1].",
-    )
-
-    extract_parser.add_argument(
-        "--demandType",
-        type=int,
-        choices=[1, 2, 3],
-        default=None,
-        help="Demand-function type.",
-    )
-
-    extract_parser.add_argument(
-        "--randomSeed",
-        type=int,
-        default=None,
-        help="Random seed used during data generation.",
-    )
-
     return parser.parse_args(argv)
 
 
 def print_arguments(args):
-    """Show the selected command and parameter values before compilation."""
+    """Show the selected command and source before copying."""
     print("Command-line arguments:")
     for name, value in vars(args).items():
         print(f"  {name} = {value}")
@@ -219,15 +148,6 @@ def load_registry(base_dir):
         expected = f"{category}/{name}.gms"
         if record["file"] != expected:
             raise ValueError(f"Problem record {index}: file must be {expected}")
-        required = record.get("required_arguments", [])
-        if (not isinstance(required, list) or any(
-                not isinstance(argument, str)
-                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", argument)
-                for argument in required)):
-            raise ValueError(
-                f"Problem record {index}: required_arguments must be an array "
-                "of argument names without leading '--'"
-            )
         key = (category, name)
         if key in seen:
             raise ValueError(f"Duplicate problem registration: {category}/{name}")
@@ -375,7 +295,7 @@ def add_problem(category, source_file, base_dir):
 
 
 def extract_problem(args, base_dir):
-    """Expand a GAMS model and return tempMCPs/<selected name>.gms."""
+    """Copy a GAMS source unchanged to tempMCPs/<selected name>.gms."""
     validate_type_name(args.type)
     # A selection is a model name, not a path outside the chosen model folder.
     if (not args.select or args.select in {".", ".."}
@@ -390,60 +310,27 @@ def extract_problem(args, base_dir):
             f"Use 'list --type {args.type}' to see available models."
         )
 
-    # Forward only modeling options that the user actually supplied. Routing
-    # options and omitted values must not override model defaults in GAMS.
-    parameters = []
-    for name, value in vars(args).items():
-        if name in {"command", "type", "select"} or value is None:
-            continue
-        flag = "lambda" if name == "lambda_" else name  # Restore the GAMS spelling.
-        parameters.append(f"--{flag}={value}")
+    output_dir = base_dir / "tempMCPs"
+    if output_dir.is_symlink():
+        raise RuntimeError(f"Extraction output directory must not be a symlink: {output_dir}")
+    output_dir.mkdir(exist_ok=True)
+    output = output_dir / f"{args.select}.gms"
+    if output.exists() and output.samefile(model):
+        raise RuntimeError(f"Extraction output would overwrite the source model: {output}")
 
-    # dumpOpt=21 writes <input name>.dmp in the working directory. Set an
-    # existing dump aside so it cannot be mistaken for this compilation's output.
-    dump = base_dir / f"{args.select}.dmp"
-    if dump.exists() and not dump.is_file() and not dump.is_symlink():
-        raise RuntimeError(f"Cannot write the GAMS dump: {dump} is not a file")
-    with tempfile.TemporaryDirectory(prefix=".extractProblem-", dir=base_dir) as directory:
-        # Preserve any pre-existing dump and restore it after this extraction.
-        previous_dump = Path(directory) / "previous.dmp"
-        if dump.exists() or dump.is_symlink():
-            dump.replace(previous_dump)
-        # action=c compiles without running solve statements. dumpOpt=21 writes
-        # the expanded source, including any embedded poly.txt writer.
-        command = [
-            "gams", str(model), "action=c", "dumpOpt=21",
-            *parameters,
-        ]
-        try:
-            try:
-                # A fixed working directory keeps relative model paths and dump
-                # locations consistent. check=True rejects failed compilations.
-                subprocess.run(command, cwd=base_dir, check=True)
-            except FileNotFoundError as error:
-                raise RuntimeError("GAMS executable 'gams' was not found on PATH") from error
-            # A zero exit status alone is insufficient if no usable dump exists.
-            if not dump.is_file() or dump.stat().st_size == 0:
-                raise RuntimeError("GAMS completed without creating the preprocessed model")
-            # Publish each model under its own name, creating the generated
-            # output folder only after compilation has produced a usable dump.
-            output_dir = base_dir / "tempMCPs"
-            if output_dir.is_symlink():
-                raise RuntimeError(f"Extraction output directory must not be a symlink: {output_dir}")
-            output_dir.mkdir(exist_ok=True)
-            output = output_dir / f"{args.select}.gms"
-            if output.exists() and output.samefile(model):
-                raise RuntimeError(f"Extraction output would overwrite the source model: {output}")
-            # Replace the output only after success. Both paths are on the same
-            # filesystem, so readers see the complete old or new model.
-            dump.replace(output)
-        finally:
-            # Restore the original dump on success or failure; otherwise remove
-            # any partial dump produced by this attempt.
-            if previous_dump.exists() or previous_dump.is_symlink():
-                previous_dump.replace(dump)
-            elif dump.exists():
-                dump.unlink()
+    # Stream large models and publish only a complete copy. A failed copy leaves
+    # any previous output intact, and source bytes (including defaults) are kept.
+    temporary = None
+    try:
+        with model.open("rb") as reader, tempfile.NamedTemporaryFile(
+            dir=output_dir, prefix=f".{args.select}-", suffix=".gms", delete=False,
+        ) as writer:
+            temporary = Path(writer.name)
+            shutil.copyfileobj(reader, writer)
+        temporary.replace(output)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
     return output
 
 
@@ -477,30 +364,12 @@ def extract_list(source_file, base_dir):
             failed += 1
             continue
         record = matches[0]
-        required = record.get("required_arguments", [])
-        if required:
-            flags = ", ".join(f"--{argument}" for argument in required)
-            print(
-                f"Warning: {context}: requires arguments ({flags}); skipping. "
-                "Generate this problem separately using "
-                f"'extract --type {record['type']} --select {name}' "
-                "with the required arguments.", file=sys.stderr,
-            )
-            skipped += 1
-            continue
-        # Reuse the single-model path, forwarding no batch routing options or
-        # parameter overrides. Defaults declared in the GAMS source still apply.
+        # Individual and batch extraction both copy the source unchanged.
         args = parse_arguments([
             "extract", "--type", record["type"], f"--select={name}",
         ])
         try:
             output = extract_problem(args, base_dir)
-        except subprocess.CalledProcessError as error:
-            print(
-                f"Extraction failed: {context}: GAMS exited with status "
-                f"{error.returncode}.", file=sys.stderr,
-            )
-            failed += 1
         except (OSError, RuntimeError, ValueError) as error:
             print(f"Extraction failed: {context}: {error}", file=sys.stderr)
             failed += 1
@@ -568,10 +437,6 @@ def main(argv=None):
     print_arguments(args)
     try:
         output = extract_problem(args, BASE_DIR)
-    except subprocess.CalledProcessError as error:
-        # Preserve the compiler's exit status so shell scripts can detect failures.
-        print(f"Extraction failed: GAMS exited with status {error.returncode}.", file=sys.stderr)
-        return error.returncode
     except (OSError, RuntimeError, ValueError) as error:
         # Report expected input/environment errors without a Python traceback.
         print(f"Extraction failed: {error}", file=sys.stderr)

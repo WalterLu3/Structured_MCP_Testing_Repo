@@ -1,4 +1,4 @@
-$if not setglobal dimension $setglobal dimension 25
+$if not set dimension $set dimension 25
 
 sets
     I / 1 * %dimension% /,
