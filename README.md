@@ -18,7 +18,7 @@ General MCP/VI extraction uses `extractProblem.py` from the repository root. Sto
 
 The optional Jacobian visualization tool also requires `gams.transfer` and Matplotlib. See [visualization_tool/README.md](visualization_tool/README.md).
 
-The `solver` entry in the current checkout is an empty placeholder file. Experimental solver binaries and installation instructions are not bundled there; configure the required solver build in GAMS before running the corresponding experiments.
+The [`solver/`](solver/) directory contains an experimental PATHVICRASH build for macOS on Apple Silicon. See the [installation instructions](solver/README.md) to register it in GAMS as `pathvicrash`.
 
 ## Repository layout
 

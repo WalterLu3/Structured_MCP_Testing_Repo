@@ -1,0 +1,19 @@
+solverConfig:
+
+- PATHVICRASH:
+    fileType: 103001
+    dictType: 5
+    licCodes: 000102030405
+    defaultOkFlag: True
+    hiddenFlag: False
+    scriptName: gmsgenus.run
+    executableName: gmsgenux.out
+    defName: /Users/<user>/Library/Preferences/GAMS/optpath_pathvi.def
+    library:
+      libName: /Users/<user>/Library/Preferences/GAMS/libptwcclib64.dylib
+      auditCode: ptw
+      solverInterfaceType: 2
+      threadSafeIndic: False
+    modelTypes:
+    - MCP
+    - CNS
