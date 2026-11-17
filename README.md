@@ -25,7 +25,7 @@ The [`solver/`](solver/) directory contains an experimental PATHVICRASH build fo
 | Path | Purpose |
 | --- | --- |
 | [`extractProblem.py`](extractProblem.py) | Register, list, or extract models individually or from a text list. |
-| [`problems.json`](problems.json) | Central registry of types, problem names, and source files. |
+| [`problems.json`](problems.json) | Central registry of types, problem names, source files, and detected runtime options. |
 | [`problems.txt`](problems.txt) | Example names-only list for batch extraction. |
 | [`MCP/`](MCP/) | Standard MCP models, including selected MCPLIB problems. |
 | [`VI/`](VI/) | Standalone models with VI structure and supporting experiments. |
@@ -376,21 +376,51 @@ python3 extractProblem.py addProblem --type MCP --file MCP/myMCP.gms
 
 Duplicate registrations within a type, including case variants, are rejected. Existing destination files are not overwritten; to register an existing unregistered model, pass that file's own path. If copying or saving the registry fails, the new copy is removed and existing files are preserved. The command imports only the specified file, so use standalone models or make their include/data dependencies available separately. Registration copies and records the source without compiling or solving it.
 
-Each problem record contains its name without the `.gms` extension, its registered type, and its repository-relative source path. For example:
+Each problem record contains its name without the `.gms` extension, its registered type, its repository-relative source path, and detected runtime option names. For example:
 
 ```json
 {
   "name": "myMCP",
   "type": "MCP",
-  "file": "MCP/myMCP.gms"
+  "file": "MCP/myMCP.gms",
+  "options": ["dimension"]
 }
 ```
 
 Each `(type, name)` pair must be unique, and `file` must match `<type>/<name>.gms`. A name can be registered separately under different types. Keep parameter defaults in the GAMS source. Removing an entry removes that problem from the listing without deleting its source file.
 
-Define defaults for all configurable inputs in the GAMS source before registering a model. This lets each example run independently and keeps model parameters out of the registry and the Python extractor.
+Define defaults for all configurable inputs in the GAMS source before registering a model. This lets each example run independently. The registry describes available options; parameter values are supplied directly to GAMS.
 
 The registry controls `list` and `extractList`. Single-model extraction continues to select an existing `.gms` file directly using `--type` and `--select`.
+
+### Discovering and updating runtime options
+
+List the configurable options of a registered model with:
+
+```bash
+python3 extractProblem.py listOpt --type MCP --select bai_haung
+```
+
+The command reads the current GAMS source, prints its options and an example GAMS call, and checks them against `problems.json`. Replace `VALUE` in the printed example with the desired value. Models with no detected options display `(none)`. Listing is read-only; stale or missing metadata produces a warning with the refresh command and a nonzero exit status.
+
+After editing a model's configurable inputs, refresh its metadata with:
+
+```bash
+python3 extractProblem.py updateProblem --type MCP --select bai_haung
+```
+
+`updateProblem` rescans the registered source and replaces only that record's `options` array. It preserves the source and other records; a scanning, validation, or saving failure leaves the registry unchanged. `addProblem` performs the same detection automatically for new models. Models without configurable inputs have `"options": []`.
+
+Detection follows this repository convention, with matching names and a nonempty default:
+
+```gams
+$if not set dimension $set dimension 200
+set i /1*%dimension%/;
+```
+
+Declarations and references are matched case-insensitively, and duplicate names are listed once. A `$setglobal` assignment is also supported with the same `$if not set` guard. Every declared option must have a `%name%` reference in the source. An unused declaration or a guard that sets a different name is reported as an error. Ordinary internal variables such as `%console%` are not exposed just because they are referenced.
+
+This is a source convention, not a full GAMS parser: detection skips `*` comment lines, `$ontext`/`$offtext` blocks, `/* ... */` comments, and `$onecho`/`$onechoV` blocks, and stops at an unconditional `$exit`. It does not expand include files, evaluate conditional branches, or interpret custom comment delimiters. Keep public option defaults and references in the registered source using the pattern above. Registration and metadata checks do not compile or solve GAMS models.
 
 ### MCP models
 

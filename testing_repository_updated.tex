@@ -19,9 +19,31 @@ The testing repository serves two main purposes:
 
 We first explain how the repository can be used as a general-purpose testing framework for generating problem instances. We then describe in detail how to reproduce the experiments presented in this thesis.
 
+Table~\ref{table:testing_repo_commands} provides an overview of the commands supported by the script. Each command is invoked from the repository root using \texttt{python extractProblem.py COMMAND}, followed by the relevant arguments. These commands manage problem source files and the repository's problem registry; running a generated model in GAMS is a separate step, described below.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Overview of commands supported by \texttt{extractProblem.py}.}
+    \label{table:testing_repo_commands}
+    \begin{tabular}{@{}p{0.18\textwidth}p{0.47\textwidth}p{0.27\textwidth}@{}}
+        \hline
+        \textbf{Command} & \textbf{Purpose} & \textbf{Main arguments} \\
+        \hline
+        \texttt{list} & List registered problems of a given type. & \texttt{--type} \\
+        \texttt{extract} & Copy a selected problem source file to \texttt{tempMCPs/}. & \texttt{--type}, \texttt{--select} \\
+        \texttt{extractList} & Extract multiple problems listed in a text file. & \texttt{--file} \\
+        \texttt{addType} & Register a new problem type and create its directory. & \texttt{--type} \\
+        \texttt{addProblem} & Register a new problem from a GAMS source file. & \texttt{--type}, \texttt{--file} \\
+        \texttt{updateProblem} & Refresh a registered problem's runtime option metadata. & \texttt{--type}, \texttt{--select} \\
+        \texttt{listOpt} & List runtime options and check their metadata. & \texttt{--type}, \texttt{--select} \\
+        \hline
+    \end{tabular}
+\end{table}
+
 \section{General-Purpose Problem Generation}
 
-The testing repository provides a unified framework that allows users to extract problems from the problem set and add their own problems to it. The repository initially contains the following two problem types:
+The testing repository provides a unified framework that allows users to extract problems from the collection and add their own problems to it. The repository initially contains the following two problem types:
 \begin{enumerate}
     \item MCPs: this category currently contains general MCPs.
     \item VIs: this category contains MCPs with VI structure.
@@ -46,7 +68,7 @@ The \texttt{tempMCPs/} directory is created automatically in the repository cont
 The script can be executed from the command line using the following command:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py extract \
+python extractProblem.py extract 
        --type PROBLEM_TYPE --select PROBLEM_NAME
 \end{minted}
 
@@ -112,12 +134,41 @@ The \texttt{list} command reads the record file and reports registered problem n
 
 The record file also includes large generated models that are excluded from Git. These models must be generated locally before they can be listed or extracted. Individual extraction selects the source file directly using \texttt{--type} and \texttt{--select}, whereas listing and batch extraction use the record file.
 
+\subsubsection{Discovering and Updating Runtime Options}
+
+To find the configurable options of a registered problem, run:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py listOpt --type MCP --select bai_haung
+\end{minted}
+
+The command reads the current GAMS source, prints the detected option names and an example GAMS call, and compares the names with the record's \texttt{options} array. Replace \texttt{VALUE} in the printed example with the desired value. Models without detected options display \texttt{(none)}. Listing does not modify any files. If the metadata is missing or stale, it prints a warning with the appropriate refresh command and returns a nonzero exit status.
+
+After editing a model's configurable inputs, refresh its metadata using:
+
+\begin{minted}[frame=lines, linenos]{text}
+python extractProblem.py updateProblem --type MCP --select bai_haung
+\end{minted}
+
+This command rescans the registered source and replaces only that record's \texttt{options} array. The source file and other records are preserved. If scanning, validation, or saving fails, the existing registry is preserved. New problems receive this metadata automatically through \texttt{addProblem}; problems with no configurable inputs have an empty \texttt{options} array.
+
+Option detection follows a repository convention. Each configurable input must have a conditional default declaration and a corresponding reference in the registered source. For example:
+
+\begin{minted}[frame=lines, linenos]{text}
+$if not set dimension $set dimension 200
+set i /1*%dimension%/;
+\end{minted}
+
+The checked and assigned names must match, and the default must be nonempty. Names are matched case-insensitively and duplicates are listed once. A \texttt{\$setglobal} assignment is also supported with the same \texttt{\$if not set} guard. Unused declarations and guards that set a different name are reported as errors. Internal variables are not treated as user options solely because they appear in a \texttt{\%name\%} reference.
+
+The scanner skips asterisk comment lines, \texttt{\$ontext}/\texttt{\$offtext} blocks, \texttt{/* ... */} comments, and \texttt{\$onecho}/\texttt{\$onechoV} blocks, and stops at an unconditional \texttt{\$exit}. It does not expand include files, evaluate conditional branches, or interpret custom comment delimiters. Authors should keep public option declarations and references in the registered source using the pattern above. These checks do not compile or solve the model; extraction continues to copy the source unchanged.
+
 \subsubsection{Generating an MCP Instance}
 
 To generate a standard MCP instance, users specify the problem name using \texttt{--select}. For example,
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py extract \
+python extractProblem.py extract 
        --type MCP --select bai_haung
 \end{minted}
 
@@ -129,7 +180,7 @@ This command copies the MCP source to \texttt{tempMCPs/bai\_haung.gms}, retainin
 A VI instance can be generated in a similar manner:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py extract \
+python extractProblem.py extract 
        --type VI --select agg
 \end{minted}
 
@@ -152,7 +203,7 @@ To extract these problems, run:
 python extractProblem.py extractList --file problems.txt
 \end{minted}
 
-The script looks up each name across all problem types registered in \texttt{problems.json}, so users do not need to supply \texttt{--type}. This example copies the sources to \texttt{tempMCPs/agg.gms}, \texttt{tempMCPs/bai\_haung.gms}, and \texttt{tempMCPs/dirkse2.gms}. No parameter values are supplied through the text file. Instead, the defaults defined in each model are preserved for use when running GAMS; both \texttt{bai\_haung} and \texttt{dirkse2} define default dimensions.
+The script looks up each name across all problem types that were previously registered in \texttt{problems.json}, so users do not need to supply \texttt{--type}. This example copies the sources to the \texttt{agg.gms}, \texttt{bai\_haung.gms}, and \texttt{dirkse2.gms}, in \texttt{tempMCPs/}. No parameter values are supplied through the text file. Instead, the defaults defined in each model are preserved for use when running GAMS; both \texttt{bai\_haung} and \texttt{dirkse2} define default dimensions.
 
 Each configurable example should define defaults in its GAMS source so it can be run independently. Users can override these defaults when running GAMS; batch extraction copies the sources without interpreting their parameters.
 
@@ -186,10 +237,10 @@ GAMS writes relative output files in its working directory. Running the model fr
 For a stochastic optimization problem, users specify the number of stages and the number of children per nonterminal scenario-tree node. For example,
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py \
-       --type StochasticOptimization \
-       --nstage 5 \
-       --nchildren 3 \
+python extractProblem.py 
+       --type StochasticOptimization 
+       --nstage 5 
+       --nchildren 3 
        --randomSeed 10
 \end{minted}
 
@@ -210,13 +261,13 @@ In this case, two MCP models are generated in \textbf{tempFolder}:
 A stochastic equilibrium problem can be generated by specifying the scenario-tree dataset and the relevant model parameters. For example,
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py \
-       --type StochasticEquilibrium \
-       --data tree3 \
-       --quad 0.1 \
-       --lambda 0.5 \
-       --alpha 0.95 \
-       --demandType 2 \
+python extractProblem.py 
+       --type StochasticEquilibrium 
+       --data tree3 
+       --quad 0.1 
+       --lambda 0.5 
+       --alpha 0.95 
+       --demandType 2 
        --randomSeed 10
 \end{minted}
 
@@ -268,14 +319,14 @@ A newly registered type has no listed problems until individual problems have be
 To import a new problem from a user-provided source file, specify its registered type and file path:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py addProblem \
+python extractProblem.py addProblem 
        --type MCP --file /path/to/file/newProblem.gms
 \end{minted}
 
 The script copies the file to \texttt{MCP/newProblem.gms} and adds its record to the file \texttt{problems.json}. The source filename determines the registered problem name, and the original source file is preserved. If the file is already in the intended type directory, users can register it in place:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py addProblem \
+python extractProblem.py addProblem 
        --type MCP --file MCP/newProblem.gms
 \end{minted}
 
@@ -286,19 +337,20 @@ python extractProblem.py list --type MCP
 python extractProblem.py extract --type MCP --select newProblem
 \end{minted}
 
-Each problem record contains its name without the \texttt{.gms} extension, its registered type, and its source path relative to the repository. For example:
+Each problem record contains its name without the \texttt{.gms} extension, its registered type, its source path relative to the repository, and its detected runtime option names. For example:
 
 \begin{minted}[frame=lines, linenos]{json}
 {
   "name": "newProblem",
   "type": "MCP",
-  "file": "MCP/newProblem.gms"
+  "file": "MCP/newProblem.gms",
+  "options": ["dimension"]
 }
 \end{minted}
 
 Each combination of type and problem name must be unique, and the source path must follow the form \texttt{TYPE/NAME.gms}. A name can be registered under different types, but such a name must be extracted individually because it is ambiguous in a names-only batch list.
 
-Each model should define default values for its configurable parameters in its GAMS source so it can be run independently. Users can override these defaults when running GAMS; the registry does not need to record model parameters.
+Each model should define default values for its configurable parameters in its GAMS source so it can be run independently. Users can override these defaults when running GAMS. The \texttt{addProblem} command detects the option names from the source and stores them in the record's \texttt{options} array; parameter values are supplied directly to GAMS.
 
 Removing a problem record from \texttt{problems.json} removes that problem from listing and batch lookup without deleting its source file. The following examples describe how to prepare MCP and VI source files for registration.
 
@@ -329,12 +381,12 @@ x.l(t,tt) = 40;
 solve foo using mcp;
 \end{minted}
 
-The value of \texttt{dimension} defaults to 20 and can be overridden through the \texttt{--dimension} command-line argument when calling GAMS. When \texttt{extractProblem.py} is run on this model, the script copies the source without substituting a value for \texttt{\%dimension\%} or solving the model. The copied model is saved as \texttt{tempMCPs/newProblem.gms}.
+The value of \texttt{dimension} defaults to 20 and can be overridden through the \texttt{--dimension} command-line argument when calling GAMS. When we execute the script \texttt{extractProblem.py} on this model, the script copies the source without substituting a value for \texttt{\%dimension\%} or solving the model. The copied model is saved as \texttt{newProblem.gms} in \texttt{tempMCPs/}.
 
 Register the source file using \texttt{addProblem} as shown above. To extract the model individually, run:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py extract \
+python extractProblem.py extract 
        --type MCP --select newProblem
 \end{minted}
 
@@ -420,7 +472,7 @@ This section provides detailed instructions for reproducing the experiments pres
 To extract a VI instance, run the following command from the repository's root directory. This example assumes that \texttt{exampleVI.gms} has been added as described above:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py extract \
+python extractProblem.py extract 
        --type VI --select exampleVI
 \end{minted}
 
@@ -430,14 +482,14 @@ The corresponding MCP model is saved as \texttt{tempMCPs/exampleVI.gms}. The PAT
     \item PNewton:
 
 \begin{minted}[frame=lines, linenos]{text}
-# filename: path.opt
+# filename: pathvicrash.opt
 crash_method pnewton
 \end{minted}
 
     \item Lemke Ray Start:
 
 \begin{minted}[frame=lines, linenos]{text}
-# filename: path.op2
+# filename: pathvicrash.op2
 crash_method none
 crash_perturb 0
 lemke_start first
@@ -446,13 +498,13 @@ lemke_start first
     \item PATHVI Ray Start:
 
 \begin{minted}[frame=lines, linenos]{text}
-# filename: path.op3
+# filename: pathvicrash.op3
 crash_method pathvi
 pathvi_filename poly.txt
 \end{minted}
 \end{enumerate}
 
-The experimental version of the PATH solver that includes the PATHVI crash method is stored in the \texttt{solver} directory. This directory also contains a \texttt{README.md} file with instructions for incorporating the experimental version into a GAMS installation. To reproduce the experimental results, run the generated \texttt{exampleVI.gms} model from \texttt{tempMCPs/} using the experimental solver with each of the option file configurations listed above. For example, adopting PNewton corresponds to setting \texttt{optfile} to 1, while adopting Lemke Ray Start corresponds to setting \texttt{optfile} to 2.
+The experimental version of the PATH solver that includes the PATHVI crash method is stored in the \texttt{solver} directory, as PATHVICRASH solver. This directory also contains a \texttt{README.md} file with instructions for incorporating the experimental version into a GAMS installation for the MacOS with M series chips. To reproduce the experimental results, run the generated \texttt{exampleVI.gms} model from \texttt{tempMCPs/} using the experimental solver with each of the option file configurations listed above. For example, adopting PNewton corresponds to setting \texttt{optfile} to 1, while adopting Lemke Ray Start corresponds to setting \texttt{optfile} to 2.
 
 \begin{minted}[frame=lines, linenos]{text}
 cd tempMCPs
@@ -530,7 +582,7 @@ This section provides detailed instructions for running the experiments presente
 To test different basis packages on an MCP, first extract a model using the following command:
 
 \begin{minted}[frame=lines, linenos]{text}
-python extractProblem.py extract \
+python extractProblem.py extract 
        --type MCP --select bai_haung
 \end{minted}
 
@@ -577,13 +629,20 @@ To run an individual experiment, change to the \texttt{stochastic\_optimization}
 
 \begin{minted}[frame=lines, linenos]{text}
 cd stochastic_optimization
-gams clearlak-ecvarup_main.gms --nstage=4 --nchildren=3 \
+gams clearlak-ecvarup_main.gms --nstage=4 --nchildren=3 
      --randomSeed=1 --experimentType=RU-PATH
 \end{minted}
 
-The option \texttt{--nstage} specifies the number of stages in the scenario tree, while \texttt{--nchildren} specifies the number of child nodes associated with each nonterminal node. The option \texttt{--randomSeed} specifies the random seed used during data generation, and \texttt{--experimentType} selects the solution method.
+The command-line options are described below:
 
-In this example, the command solves an instance with four stages, three child nodes per nonterminal node, and random seed $1$ using the RU-PATH method. Supported values of \texttt{--experimentType} include \texttt{RU}, \texttt{RU-PATH}, \texttt{Equilibrium}, \texttt{PD-PATH}, \texttt{PD-PATH-LP}, and \texttt{PD-PATH-NLP}. Additional experiment options can be found in \texttt{clearlak-ecvarup\_main.gms}.
+\begin{itemize}
+    \item \texttt{--nstage}: Specifies the number of stages in the scenario tree.
+    \item \texttt{--nchildren}: Specifies the number of child nodes associated with each nonterminal node.
+    \item \texttt{--randomSeed}: Specifies the random seed used during data generation.
+    \item \texttt{--experimentType}: Selects the solution method. Supported values include \texttt{RU}, \texttt{RU-PATH}, \texttt{Equilibrium}, \texttt{PD-PATH}, \texttt{PD-PATH-LP}, and \texttt{PD-PATH-NLP}.
+\end{itemize}
+
+In this example, the command solves an instance with four stages, three child nodes per nonterminal node, and random seed $1$ using the RU-PATH method. Additional experiment options can be found in \texttt{clearlak-ecvarup\_main.gms}.
 
 \subsection{Stochastic Equilibrium Experiments}
 
@@ -610,20 +669,38 @@ To run an individual experiment, change to the \texttt{stochastic\_equilibrium} 
 
 \begin{minted}[frame=lines, linenos]{text}
 cd stochastic_equilibrium
-gams main.gms --data=tree3 --randomSeed=1 --quad=10 --lambda=0.3 \
+gams main.gms --data=tree3 --randomSeed=1 --quad=10 --lambda=0.3 
      --alpha=0.74 --demandType=1 --algorithm=PD-PATH
 \end{minted}
 
-The option \texttt{--data} specifies the scenario-tree dataset used in the experiment. The available values are \texttt{tree2} and \texttt{tree3}; this example uses \texttt{tree3}. The option \texttt{--randomSeed} specifies the random seed used during data generation, while \texttt{--quad} specifies the weight of the quadratic term in the agents' stage-cost functions.
+The command-line options are described below:
 
-The options \texttt{--lambda} and \texttt{--alpha} specify the risk-aversion weight and the confidence level, respectively, in the coherent risk measure
-\[
-    (1-\lambda)\mathbb{E}(\cdot)
-    + \lambda \operatorname{CVaR}_{\alpha}(\cdot).
-\]
-Both parameters take values in the interval $[0,1]$. The option \texttt{--demandType} selects among the three demand specifications \parencite{shenThesis2023} and accepts the values \texttt{1}, \texttt{2}, and \texttt{3}.
+\begin{itemize}
+    \item \texttt{--data}: Specifies the scenario-tree dataset. The available values are \texttt{tree2} and \texttt{tree3}; this example uses \texttt{tree3}.
+    \item \texttt{--randomSeed}: Specifies the random seed used during data generation.
+    \item \texttt{--quad}: Specifies the weight of the quadratic term in the agents' stage-cost functions.
+    \item \texttt{--lambda}: Specifies the risk-aversion weight $\lambda$ in the coherent risk measure
+    \[
+        (1-\lambda)\mathbb{E}(\cdot)
+        + \lambda \operatorname{CVaR}_{\alpha}(\cdot).
+    \]
+    Its value must lie in $[0,1]$.
+    \item \texttt{--alpha}: Specifies the CVaR confidence level $\alpha$ in the same risk measure. Its value must lie in $[0,1]$.
+    \item \texttt{--demandType}: Selects among the three demand specifications \parencite{shenThesis2023}. The available values are \texttt{1}, \texttt{2}, and \texttt{3}.
+    \item \texttt{--algorithm}: Selects the solution algorithm. Available algorithms include the following, as described in Section~\ref{section:stocEquAlgorithmDesign}:
+    \begin{itemize}
+        \item \texttt{PATH}
+        \item \texttt{PATH-RN}
+        \item \texttt{PD}
+        \item \texttt{PD-PATH}
+        \item \texttt{PD-CC-PATH}
+        \item \texttt{PD-TrustRegion-PATH}
+        \item \texttt{PD-LineSearch-PATH}
+    \end{itemize}
+    This example uses \texttt{PD-PATH}.
+\end{itemize}
 
-The option \texttt{--algorithm} selects the solution algorithm. In this example, it is set to \texttt{PD-PATH}. Available algorithms include \texttt{PATH}, \texttt{PATH-RN}, \texttt{PD}, \texttt{PD-PATH}, \texttt{PD-CC-PATH}, \texttt{PD-TrustRegion-PATH}, and \texttt{PD-LineSearch-PATH}, as described in Section~\ref{section:stocEquAlgorithmDesign}. Any option not explicitly supplied uses the corresponding default value defined in the file \texttt{parameters.gms}.
+Any option not explicitly supplied uses the corresponding default value defined in \texttt{parameters.gms}.
 
 \section{Summary}
 

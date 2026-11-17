@@ -459,7 +459,7 @@ class ProblemRegistrationTests(ExtractionFixture):
         self.assertIn("Registered problem 'MCP/newProblem'", output.getvalue())
         self.assertEqual((self.root / "MCP" / "newProblem.gms").read_bytes(), source.read_bytes())
         self.assertEqual(extraction.load_problem_records(self.root), previous + [
-            {"name": "newProblem", "type": "MCP", "file": "MCP/newProblem.gms"}
+            {"name": "newProblem", "type": "MCP", "file": "MCP/newProblem.gms", "options": []}
         ])
         run.assert_not_called()
 
@@ -468,7 +468,7 @@ class ProblemRegistrationTests(ExtractionFixture):
         source.write_bytes(b"existing user model")
         with patch.object(extraction.shutil, "copyfileobj") as copy:
             record = extraction.add_problem("VI", source, self.root)
-        self.assertEqual(record, {"name": "newProblem", "type": "VI", "file": "VI/newProblem.gms"})
+        self.assertEqual(record, {"name": "newProblem", "type": "VI", "file": "VI/newProblem.gms", "options": []})
         self.assertEqual(source.read_bytes(), b"existing user model")
         copy.assert_not_called()
 

@@ -83,6 +83,14 @@ def parse_arguments(argv=None):
         help="Path to the .gms source file; its filename determines the problem name.",
     )
 
+    for command, help_text in (
+        ("updateProblem", "Refresh a registered model's runtime option metadata."),
+        ("listOpt", "List runtime options and check their registered metadata."),
+    ):
+        option_parser = subparsers.add_parser(command, help=help_text)
+        option_parser.add_argument("--type", required=True, type=parse_type_name)
+        option_parser.add_argument("--select", required=True, help="Registered model name without .gms.")
+
     # Routing options identify the source file rather than GAMS model parameters.
     extract_parser.add_argument(
         "--type",
@@ -148,6 +156,13 @@ def load_registry(base_dir):
         expected = f"{category}/{name}.gms"
         if record["file"] != expected:
             raise ValueError(f"Problem record {index}: file must be {expected}")
+        options = record.get("options", [])
+        if (not isinstance(options, list) or any(
+                not isinstance(option, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", option)
+                for option in options)):
+            raise ValueError(f"Problem record {index}: options must be an array of option names without '--'")
+        if len({option.casefold() for option in options}) != len(options):
+            raise ValueError(f"Problem record {index}: duplicate option names")
         key = (category, name)
         if key in seen:
             raise ValueError(f"Duplicate problem registration: {category}/{name}")
@@ -180,6 +195,138 @@ def save_registry(base_dir, data):
     finally:
         if temporary is not None and temporary.exists():
             temporary.unlink()
+
+
+def active_gams_lines(source):
+    """Stream source, skipping common comments and literal echo blocks.
+
+    This supports the repository convention, not arbitrary GAMS preprocessing.
+    Includes are not expanded and conditional branches are not evaluated.
+    """
+    block = None
+    c_comment = False
+    with Path(source).open(encoding="utf-8-sig") as stream:
+        for number, raw in enumerate(stream, 1):
+            if not block and not c_comment and "$" not in raw and "%" not in raw and "/*" not in raw:
+                continue  # Large exported models mostly contain ordinary equations.
+            stripped = raw.lstrip()
+            if block:
+                if re.match(rf"\${block}\b", stripped, re.I):
+                    block = None
+                continue
+            if not c_comment and stripped.startswith("*"):
+                continue
+            # Preserve quoted strings: percent references within them are used
+            # by GAMS too, while comment delimiters inside them are literal.
+            if not c_comment and "/*" not in raw:
+                line = raw
+            else:
+                line = []
+                quote = None
+                index = 0
+                while index < len(raw):
+                    pair = raw[index:index + 2]
+                    char = raw[index]
+                    if c_comment:
+                        if pair == "*/":
+                            c_comment = False
+                            line.append(" ")
+                            index += 2
+                            continue
+                    elif quote:
+                        line.append(char)
+                        if char == quote:
+                            if index + 1 < len(raw) and raw[index + 1] == quote:
+                                line.append(quote)
+                                index += 2
+                                continue
+                            quote = None
+                    elif pair == "/*":
+                        c_comment = True
+                        index += 2
+                        continue
+                    else:
+                        line.append(char)
+                        if char in "\"'":
+                            quote = char
+                    index += 1
+                line = "".join(line)
+            if re.match(r"\s*\$ontext\b", line, re.I):
+                block = "offtext"
+                continue
+            if re.match(r"\s*\$onecho(?:v)?\b", line, re.I):
+                block = "offecho"
+                continue
+            if re.fullmatch(r"\s*\$exit\s*", line, re.I):
+                break
+            yield number, line
+    if block or c_comment:
+        raise ValueError(f"{source}: unterminated comment or echo block")
+
+
+def detect_options(source):
+    """Find referenced options declared using a conditional default.
+
+    Supported form: $if not set NAME $set NAME DEFAULT (case insensitive).
+    A $setglobal assignment is also supported with the same 'not set' guard.
+    """
+    default = re.compile(
+        r"^\s*\$if\s+not\s+set\s+([A-Za-z][A-Za-z0-9_]*)\s+"
+        r"\$set(?:global)?\s+([A-Za-z][A-Za-z0-9_]*)(?:\s+(.*?))?\s*$", re.I,
+    )
+    declared, referenced = {}, set()
+    for number, line in active_gams_lines(source):
+        match = default.match(line)
+        if match:
+            checked, assigned, value = match.groups()
+            if checked.casefold() != assigned.casefold():
+                raise ValueError(f"{source}:{number}: default checks '{checked}' but sets '{assigned}'")
+            if value is None or not value.strip():
+                raise ValueError(f"{source}:{number}: option '{assigned}' needs a nonempty default")
+            declared.setdefault(assigned.casefold(), assigned)
+            line = value
+        referenced.update(name.casefold() for name in re.findall(r"%([A-Za-z][A-Za-z0-9_]*)%", line))
+    unused = [name for key, name in declared.items() if key not in referenced]
+    if unused:
+        raise ValueError(f"{source}: options declared but not referenced: {', '.join(unused)}")
+    return sorted(declared.values(), key=str.casefold)
+
+
+def registered_problem(data, category, name):
+    """Resolve an exact registry entry before using its validated source path."""
+    for record in data["problems"]:
+        if record["type"] == category and record["name"] == name:
+            return record
+    raise ValueError(f"Problem '{category}/{name}' is not registered")
+
+
+def update_problem(category, name, base_dir):
+    """Refresh only one model's derived options, publishing the registry atomically."""
+    data = load_registry(base_dir)
+    record = registered_problem(data, category, name)
+    record["options"] = detect_options(base_dir / record["file"])
+    save_registry(base_dir, data)
+    return record
+
+
+def list_options(category, name, base_dir):
+    """Display source-derived options, warning about stale metadata without writing."""
+    data = load_registry(base_dir)
+    record = registered_problem(data, category, name)
+    options = detect_options(base_dir / record["file"])
+    print(f"Options for {category}/{name}: {', '.join(options) if options else '(none)'}")
+    if options:
+        flags = " ".join(f"--{option}=VALUE" for option in options)
+        print(f"Example (replace VALUE with the desired value): gams {name}.gms {flags}")
+    stale = ("options" not in record or
+             {option.casefold() for option in record["options"]} != {option.casefold() for option in options})
+    if stale:
+        print(
+            f"Warning: option metadata for {category}/{name} is stale. Refresh it with:\n"
+            f"  python3 extractProblem.py updateProblem --type {category} --select {name}",
+            file=sys.stderr,
+        )
+    return 1 if stale else 0
 
 
 def type_folder(category, base_dir):
@@ -266,7 +413,8 @@ def add_problem(category, source_file, base_dir):
     if (target.exists() or target.is_symlink()) and not in_place:
         raise ValueError(f"Destination already exists: {target}. Register that file directly or choose another filename.")
 
-    record = {"name": name, "type": category, "file": f"{category}/{name}.gms"}
+    record = {"name": name, "type": category, "file": f"{category}/{name}.gms",
+              "options": detect_options(source)}
     folder_created = False
     copy_created = False
     try:
@@ -384,6 +532,17 @@ def main(argv=None):
     """Dispatch the command and return its exit status to the command line."""
     args = parse_arguments(argv)
 
+    if args.command in {"updateProblem", "listOpt"}:
+        try:
+            if args.command == "listOpt":
+                return list_options(args.type, args.select, BASE_DIR)
+            record = update_problem(args.type, args.select, BASE_DIR)
+        except (OSError, UnicodeError, RuntimeError, ValueError) as error:
+            print(f"Cannot {args.command}: {error}", file=sys.stderr)
+            return 1
+        print(f"Updated options for {args.type}/{args.select}: {', '.join(record['options']) or '(none)'}")
+        return 0
+
     if args.command == "extractList":
         try:
             return extract_list(args.file, BASE_DIR)
@@ -394,7 +553,7 @@ def main(argv=None):
     if args.command == "addProblem":
         try:
             record = add_problem(args.type, args.file, BASE_DIR)
-        except (OSError, RuntimeError, ValueError) as error:
+        except (OSError, UnicodeError, RuntimeError, ValueError) as error:
             print(f"Cannot add problem: {error}", file=sys.stderr)
             return 1
         print(f"Registered problem '{args.type}/{record['name']}'; file: {BASE_DIR / record['file']}")
