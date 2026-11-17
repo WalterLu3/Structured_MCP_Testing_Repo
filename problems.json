@@ -3225,6 +3225,14 @@
       "type": "VI",
       "file": "VI/zed.gms",
       "options": []
+    },
+    {
+      "name": "kojshin",
+      "type": "MCP",
+      "file": "MCP/kojshin.gms",
+      "options": [
+        "run"
+      ]
     }
   ]
 }
